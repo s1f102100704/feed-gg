@@ -1,4 +1,4 @@
-module RateMate
+module feed-gg/backend
 
 go 1.26.1
 

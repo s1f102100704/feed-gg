@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	dbgen "feed-gg/backend/internal/db"
+
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -16,15 +18,17 @@ func main() {
 		log.Fatal("DATABASE_URL is not set")
 	}
 
-	db, err := sql.Open("pgx", databaseURL)
+	sqlDB, err := sql.Open("pgx", databaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer sqlDB.Close()
 
-	if err := db.Ping(); err != nil {
+	if err := sqlDB.Ping(); err != nil {
 		log.Fatal(err)
 	}
+
+	queries := dbgen.New(sqlDB)
 
 	r := chi.NewRouter()
 
@@ -33,7 +37,7 @@ func main() {
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Ping(); err != nil {
+		if _, err := queries.Healthcheck(r.Context()); err != nil {
 			http.Error(w, "db not ready", http.StatusServiceUnavailable)
 			return
 		}
