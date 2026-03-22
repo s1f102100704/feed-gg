@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE region (
   id SMALLSERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -26,6 +27,15 @@ CREATE TABLE match_history (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE season(
+  id SMALLSERIAL PRIMARY KEY,
+  name varchar(30) NOT NULL UNIQUE,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE player (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -49,14 +59,14 @@ CREATE TABLE player_rank_history (
 );
 
 CREATE TABLE player_match (
-  player_profile_id BIGINT NOT NULL REFERENCES player_profile(id),
+  player_id BIGINT NOT NULL REFERENCES player(id),
   match_history_id BIGINT NOT NULL REFERENCES match_history(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (player_profile_id, match_history_id)
+  PRIMARY KEY (player_id, match_history_id)
 );
 
 CREATE TABLE player_tag (
-  player_id BIGINT NOT NULL REFERENCES player_profile(id),
+  player_id BIGINT NOT NULL REFERENCES player(id),
   tag_id BIGINT NOT NULL REFERENCES tag(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (player_id, tag_id)
@@ -64,15 +74,6 @@ CREATE TABLE player_tag (
 
 
 
-CREATE TABLE season(
-  id SMALLSERIAL PRIMARY KEY,
-  name varchar(30) NOT NULL UNIQUE,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
-
-CREATE INDEX player_profile_region_id ON player_profile(region_id);
-CREATE INDEX player_rank_history_player_profile_id ON player_rank_history(player_profile_id);
+CREATE INDEX player_region_id ON player(region_id);
+CREATE INDEX player_rank_history_player_id ON player_rank_history(player_id);
 CREATE INDEX player_match_match_history_id ON player_match(match_history_id);
