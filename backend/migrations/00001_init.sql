@@ -40,9 +40,9 @@ CREATE TABLE player (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   tag_line TEXT NOT NULL,
-  current_rank_id BIGINT NOT NULL REFERENCES player_ranks(id),
+  current_rank_id SMALLINT NOT NULL REFERENCES player_ranks(id),
   current_league_points INTEGER NOT NULL,
-  region_id BIGINT NOT NULL REFERENCES region(id),
+  region_id SMALLINT NOT NULL REFERENCES region(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (name, tag_line)
@@ -51,7 +51,7 @@ CREATE TABLE player (
 CREATE TABLE player_rank_history (
   id BIGSERIAL PRIMARY KEY,
   player_id BIGINT NOT NULL REFERENCES player(id),
-  player_ranks_id BIGINT NOT NULL REFERENCES player_ranks(id),
+  player_ranks_id SMALLINT NOT NULL REFERENCES player_ranks(id),
   league_points INTEGER NOT NULL,
   season_id SMALLINT NOT NULL REFERENCES season(id),
   recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -60,14 +60,14 @@ CREATE TABLE player_rank_history (
 
 CREATE TABLE player_match (
   player_id BIGINT NOT NULL REFERENCES player(id),
-  match_history_id BIGINT NOT NULL REFERENCES match_history(id),
+  match_history_id INTEGER NOT NULL REFERENCES match_history(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (player_id, match_history_id)
 );
 
 CREATE TABLE player_tag (
   player_id BIGINT NOT NULL REFERENCES player(id),
-  tag_id BIGINT NOT NULL REFERENCES tag(id),
+  tag_id SMALLINT NOT NULL REFERENCES tag(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (player_id, tag_id)
 );
@@ -76,4 +76,5 @@ CREATE TABLE player_tag (
 
 CREATE INDEX player_region_id ON player(region_id);
 CREATE INDEX player_rank_history_player_id ON player_rank_history(player_id);
+CREATE INDEX player_rank_history_player_ranks_id ON player_rank_history(player_ranks_id);
 CREATE INDEX player_match_match_history_id ON player_match(match_history_id);

@@ -36,6 +36,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+  migrate:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.migrate
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - GOOSE_DRIVER=postgres
+      - GOOSE_DBSTRING=postgres://postgres:password@db:5432/feed_gg?sslmode=disable
+      - GOOSE_MIGRATION_DIR=backend/migrations
+    profiles:
+      - tools
 
 volumes:
   db-store:
