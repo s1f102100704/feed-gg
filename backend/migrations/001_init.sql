@@ -62,13 +62,7 @@ CREATE TABLE player_tag (
   PRIMARY KEY (player_id, tag_id)
 );
 
-CREATE TABLE patch (
-  id SMALLSERIAL PRIMARY KEY,
-  version VARCHAR(20) NOT NULL UNIQUE,
-  release_date DATE NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+
 
 CREATE TABLE season(
   id SMALLSERIAL PRIMARY KEY,
