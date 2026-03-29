@@ -1,0 +1,1 @@
+https://future-architect.github.io/arch-guidelines/documents/forDB/postgresql_guidelines.html
