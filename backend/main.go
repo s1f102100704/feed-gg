@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	dbgen "feed-gg/backend/internal/db"
 	"feed-gg/backend/internal/httpapi"
@@ -12,6 +13,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
+)
+
+const (
+	serverReadHeaderTimeout = 5 * time.Second
+	serverReadTimeout       = 15 * time.Second
+	serverWriteTimeout      = 15 * time.Second
+	serverIdleTimeout       = 60 * time.Second
 )
 
 func main() {
@@ -32,6 +40,9 @@ func main() {
 
 	queries := dbgen.New(sqlDB)
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
+	if riotAPIKey == "" {
+		log.Fatal("RIOT_API_KEY is not set")
+	}
 	riotClient := riot.NewClient(riotAPIKey)
 	playerSearchHandler := httpapi.NewPlayerSearchHandler(riotClient)
 
@@ -53,7 +64,16 @@ func main() {
 	r.Post("/api/players/search", playerSearchHandler.Search)
 	r.Options("/api/players/search", playerSearchHandler.Search)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
+	}
+
+	log.Fatal(server.ListenAndServe())
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

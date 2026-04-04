@@ -17,6 +17,7 @@ const (
 	accountPathTemplate   = "/riot/account/v1/accounts/by-riot-id/%s/%s"
 	summonerPathTemplate  = "/lol/summoner/v4/summoners/by-puuid/%s"
 	ddragonVersionsURL    = "https://ddragon.leagueoflegends.com/api/versions.json"
+	ddragonVersionTTL     = 24 * time.Hour
 	defaultRequestTimeout = 10 * time.Second
 )
 
@@ -25,10 +26,11 @@ var (
 )
 
 type Client struct {
-	apiKey         string
-	httpClient     *http.Client
-	versionMu      sync.RWMutex
-	ddragonVersion string
+	apiKey           string
+	httpClient       *http.Client
+	versionMu        sync.RWMutex
+	ddragonVersion   string
+	ddragonFetchedAt time.Time
 }
 
 type Account struct {
@@ -142,7 +144,7 @@ func (c *Client) fetchSummoner(ctx context.Context, host string, puuid string) (
 
 func (c *Client) ddragonLatestVersion(ctx context.Context) (string, error) {
 	c.versionMu.RLock()
-	if c.ddragonVersion != "" {
+	if c.ddragonVersion != "" && time.Since(c.ddragonFetchedAt) < ddragonVersionTTL {
 		version := c.ddragonVersion
 		c.versionMu.RUnlock()
 		return version, nil
@@ -174,6 +176,7 @@ func (c *Client) ddragonLatestVersion(ctx context.Context) (string, error) {
 
 	c.versionMu.Lock()
 	c.ddragonVersion = versions[0]
+	c.ddragonFetchedAt = time.Now()
 	c.versionMu.Unlock()
 
 	return versions[0], nil
