@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,7 +11,16 @@ import (
 )
 
 type PlayerSearchHandler struct {
-	riotClient *riot.Client
+	riotClient PlayerSearcher
+}
+
+type PlayerSearcher interface {
+	SearchPlayerByRiotID(
+		ctx context.Context,
+		platformRegion string,
+		gameName string,
+		tagLine string,
+	) (*riot.PlayerProfile, int, error)
 }
 
 type playerSearchRequest struct {
@@ -25,7 +35,7 @@ type errorResponse struct {
 
 const playerSearchRequestBodyLimit = 1 << 10
 
-func NewPlayerSearchHandler(riotClient *riot.Client) *PlayerSearchHandler {
+func NewPlayerSearchHandler(riotClient PlayerSearcher) *PlayerSearchHandler {
 	return &PlayerSearchHandler{riotClient: riotClient}
 }
 
