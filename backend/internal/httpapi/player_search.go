@@ -23,6 +23,8 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
+const playerSearchRequestBodyLimit = 1 << 10
+
 func NewPlayerSearchHandler(riotClient *riot.Client) *PlayerSearchHandler {
 	return &PlayerSearchHandler{riotClient: riotClient}
 }
@@ -34,6 +36,7 @@ func (h *PlayerSearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req playerSearchRequest
+	r.Body = http.MaxBytesReader(w, r.Body, playerSearchRequestBodyLimit)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
 		return

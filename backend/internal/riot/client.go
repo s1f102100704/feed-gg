@@ -196,7 +196,7 @@ func (c *Client) doJSON(ctx context.Context, rawURL string, dest any) (int, erro
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		var riotErr riotErrorResponse
 		if err := json.Unmarshal(body, &riotErr); err == nil && riotErr.Status.Message != "" {
-			return resp.StatusCode, fmt.Errorf(riotErr.Status.Message)
+			return resp.StatusCode, errors.New(riotErr.Status.Message)
 		}
 		if len(body) > 0 {
 			return resp.StatusCode, fmt.Errorf("riot api returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
