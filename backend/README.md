@@ -6,7 +6,7 @@
 
 - Put schema files in `migrations/`
 - Put application queries in `query/`
-- Generated code is written to `internal/db/`
+- Generated code is written to `internal/infrastructure/db/sqlc/`
 
 Run:
 
@@ -27,7 +27,7 @@ domain の型を使い、必要な外部依存は interface として定義す�
 http.Request や SQL の生クエリみたいな外側の詳細は持ち込まない
 
 
-/interface
+/adapter
 外側との入出力を usecase 用に変換する層
 例: HTTP handler、request/response DTO、DB repository のインターフェース定義
 POST /api/players/search の JSON を usecase input に変換するのはここ
@@ -36,4 +36,4 @@ POST /api/players/search の JSON を usecase input に変換するのはここ
 /infrastructure
 DB、Riot API、Webフレームワークなど具体技術の実装
 例: PostgreSQL repository 実装、Riot API client 実装
-/interface や /usecase で定義した interface を満たす具体実装を置く
+/adapter や /usecase で定義した interface を満たす具体実装を置く

@@ -1,4 +1,4 @@
-package httpapi
+package httpadapter
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"feed-gg/backend/internal/riot"
+	"feed-gg/backend/internal/infrastructure/riot"
 )
 
 type fakePlayerSearcher struct {
