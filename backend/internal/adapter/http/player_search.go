@@ -1,4 +1,4 @@
-package httpapi
+package httpadapter
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"feed-gg/backend/internal/riot"
+	"feed-gg/backend/internal/infrastructure/riot"
 )
 
 type PlayerSearchHandler struct {

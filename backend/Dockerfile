@@ -11,10 +11,10 @@ COPY . .
 RUN go mod download
 
 # アプリケーションをビルド
-RUN go build -o main .
+RUN go build -o main ./cmd/api
 
 # 公開予定のコンテナのポートを明示
 EXPOSE 8080
 
 # アプリケーションを実行
-CMD ["go", "run", "main.go"]
+CMD ["./main"]

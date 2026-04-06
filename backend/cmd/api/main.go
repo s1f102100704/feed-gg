@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	dbgen "feed-gg/backend/internal/db"
-	"feed-gg/backend/internal/httpapi"
-	"feed-gg/backend/internal/riot"
+	httpadapter "feed-gg/backend/internal/adapter/http"
+	dbgen "feed-gg/backend/internal/infrastructure/db/sqlc"
+	"feed-gg/backend/internal/infrastructure/riot"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -44,7 +44,7 @@ func main() {
 		log.Fatal("RIOT_API_KEY is not set")
 	}
 	riotClient := riot.NewClient(riotAPIKey)
-	playerSearchHandler := httpapi.NewPlayerSearchHandler(riotClient)
+	playerSearchHandler := httpadapter.NewPlayerSearchHandler(riotClient)
 
 	r := chi.NewRouter()
 	r.Use(corsMiddleware)
