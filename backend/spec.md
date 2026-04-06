@@ -13,3 +13,10 @@ match-v5 を使う。
 プレイヤーのランク情報
 league-v4 を使う。
 プレイヤーのランクは summoner-v4 で取った summonerID を使って league-v4 を引く、という流れになる。API一覧に league-v4 があり、LoLドキュメントでもプレイヤーの絞り込みには PUUID または summonerID が使え、APIによってどちらを使うかが分かれると説明されている。
+
+
+
+
+
+
+
