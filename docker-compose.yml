@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend/
       dockerfile: Dockerfile
+    command: go run ./cmd/api
     ports:
       - 8080:8080
     volumes:
