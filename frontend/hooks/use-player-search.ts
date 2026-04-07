@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import {
   ApiError,
   API_BASE_URL,
-  parseRiotID,
   Region,
   SearchResult,
 } from "@/lib/player-search";
@@ -13,53 +12,58 @@ export function usePlayerSearch() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  async function searchPlayer(region: Region, riotId: string) {
-    const parsed = parseRiotID(riotId);
-    if (!parsed) {
-      setError("Riot ID は `プレイヤー名#tagline` 形式で入力してください。");
-      setResult(null);
-      return;
-    }
+  const searchPlayer = useCallback(
+    async (region: Region, gameName: string, tagLine: string) => {
+      setIsLoading(true);
+      setError("");
 
-    setIsLoading(true);
-    setError("");
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/players/search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            region,
+            gameName,
+            tagLine,
+          }),
+        });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/players/search`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          region,
-          gameName: parsed.gameName,
-          tagLine: parsed.tagLine,
-        }),
-      });
+        const payload = (await response.json()) as SearchResult | ApiError;
 
-      const payload = (await response.json()) as SearchResult | ApiError;
+        if (!response.ok) {
+          setResult(null);
+          setError(
+            "error" in payload ? payload.error : "プレイヤー情報の取得に失敗しました。",
+          );
+          return null;
+        }
 
-      if (!response.ok) {
+        const nextResult = payload as SearchResult;
+        setResult(nextResult);
+        return nextResult;
+      } catch {
         setResult(null);
-        setError(
-          "error" in payload ? payload.error : "プレイヤー情報の取得に失敗しました。",
-        );
-        return;
+        setError("backend へ接続できませんでした。");
+        return null;
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [],
+  );
 
-      setResult(payload as SearchResult);
-    } catch {
-      setResult(null);
-      setError("backend へ接続できませんでした。");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const clearResult = useCallback(() => {
+    setResult(null);
+    setError("");
+  }, []);
 
   return {
     result,
     error,
     isLoading,
     searchPlayer,
+    clearResult,
   };
 }
