@@ -26,6 +26,16 @@ export type SearchResult = {
   profileIconId: number;
   profileIconUrl: string;
   revisionDate: number;
+  soloRank?: RankedQueue;
+  flexRank?: RankedQueue;
+};
+
+export type RankedQueue = {
+  tier: string;
+  rank: string;
+  leaguePoints: number;
+  wins: number;
+  losses: number;
 };
 
 export type ApiError = {
@@ -54,6 +64,19 @@ export const regionOptions: Region[] = [
   "TW2",
   "VN2",
 ];
+
+export const rankEmblemImageMap = {
+  IRON: "/Ranked%20Emblems%20Latest/Rank=Iron.png",
+  BRONZE: "/Ranked%20Emblems%20Latest/Rank=Bronze.png",
+  SILVER: "/Ranked%20Emblems%20Latest/Rank=Silver.png",
+  GOLD: "/Ranked%20Emblems%20Latest/Rank=Gold.png",
+  PLATINUM: "/Ranked%20Emblems%20Latest/Rank=Platinum.png",
+  EMERALD: "/Ranked%20Emblems%20Latest/Rank=Emerald.png",
+  DIAMOND: "/Ranked%20Emblems%20Latest/Rank=Diamond.png",
+  MASTER: "/Ranked%20Emblems%20Latest/Rank=Master.png",
+  GRANDMASTER: "/Ranked%20Emblems%20Latest/Rank=Grandmaster.png",
+  CHALLENGER: "/Ranked%20Emblems%20Latest/Rank=Challenger.png",
+} as const;
 
 const regionPathSegmentMap: Record<Region, string> = {
   BR1: "br",
@@ -125,4 +148,33 @@ export function formatLastUpdated(revisionDate: number) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(revisionDate));
+}
+
+export function formatTierText(rank?: RankedQueue) {
+  if (!rank) {
+    return "Unranked";
+  }
+
+  return `${rank.tier} ${rank.rank}`;
+}
+
+export function calculateWinRate(rank?: RankedQueue) {
+  if (!rank) {
+    return 0;
+  }
+
+  const totalGames = rank.wins + rank.losses;
+  if (totalGames === 0) {
+    return 0;
+  }
+
+  return Math.round((rank.wins / totalGames) * 100);
+}
+
+export function getRankEmblemImageSrc(rank?: RankedQueue) {
+  if (!rank) {
+    return null;
+  }
+
+  return rankEmblemImageMap[rank.tier as keyof typeof rankEmblemImageMap] ?? null;
 }
