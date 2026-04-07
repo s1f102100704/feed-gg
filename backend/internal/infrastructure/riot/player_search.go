@@ -34,6 +34,12 @@ func (c *Client) SearchPlayerByRiotID(
 		return nil, statusCode, err
 	}
 
+	leagueEntries, statusCode, err := c.fetchRankEntries(ctx, platformHost, summoner.ID)
+	if err != nil {
+		return nil, statusCode, err
+	}
+	soloRank, flexRank := mapRanksByQueue(leagueEntries)
+
 	iconURL := ""
 	version, err := c.ddragonLatestVersion(ctx)
 	if err == nil && version != "" {
@@ -53,6 +59,8 @@ func (c *Client) SearchPlayerByRiotID(
 		ProfileIconID:  summoner.ProfileIconID,
 		ProfileIconURL: iconURL,
 		RevisionDate:   summoner.RevisionDate,
+		SoloRank:       soloRank,
+		FlexRank:       flexRank,
 	}, http.StatusOK, nil
 }
 
