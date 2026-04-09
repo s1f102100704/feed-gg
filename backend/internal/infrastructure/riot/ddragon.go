@@ -32,7 +32,7 @@ func (c *Client) ddragonLatestVersion(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("ddragon returned status %d", resp.StatusCode)

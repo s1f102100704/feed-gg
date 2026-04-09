@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -21,10 +22,13 @@ func (c *Client) doJSON(ctx context.Context, rawURL string, dest any) (int, erro
 	if err != nil {
 		return http.StatusBadGateway, err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if readErr != nil {
+			return resp.StatusCode, fmt.Errorf("riot api returned status %d: failed to read error body: %w", resp.StatusCode, readErr)
+		}
 		var riotErr riotErrorResponse
 		if err := json.Unmarshal(body, &riotErr); err == nil && riotErr.Status.Message != "" {
 			return resp.StatusCode, errors.New(riotErr.Status.Message)
@@ -40,4 +44,10 @@ func (c *Client) doJSON(ctx context.Context, rawURL string, dest any) (int, erro
 	}
 
 	return resp.StatusCode, nil
+}
+
+func closeBody(closer io.Closer) {
+	if err := closer.Close(); err != nil {
+		log.Printf("failed to close response body: %v", err)
+	}
 }
