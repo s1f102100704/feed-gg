@@ -34,7 +34,7 @@ func (c *Client) SearchPlayerByRiotID(
 		return nil, statusCode, err
 	}
 
-	leagueEntries, statusCode, err := c.fetchRankEntries(ctx, platformHost, summoner.ID)
+	leagueEntries, statusCode, err := c.fetchRankEntries(ctx, platformHost, account.PUUID)
 	if err != nil {
 		return nil, statusCode, err
 	}

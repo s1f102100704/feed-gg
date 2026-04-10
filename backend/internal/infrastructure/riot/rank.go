@@ -6,10 +6,10 @@ import (
 	"net/url"
 )
 
-const leagueEntriesBySummonerPathTemplate = "/lol/league/v4/entries/by-summoner/%s"
+const leagueEntriesByPuuidPathTemplate = "/lol/league/v4/entries/by-puuid/%s"
 
-func (c *Client) fetchRankEntries(ctx context.Context, host string, summonerID string) ([]LeagueEntry, int, error) {
-	path := fmt.Sprintf(leagueEntriesBySummonerPathTemplate, url.PathEscape(summonerID))
+func (c *Client) fetchRankEntries(ctx context.Context, host string, puuid string) ([]LeagueEntry, int, error) {
+	path := fmt.Sprintf(leagueEntriesByPuuidPathTemplate, url.PathEscape(puuid))
 
 	var entries []LeagueEntry
 	statusCode, err := c.doJSON(ctx, host+path, &entries)
