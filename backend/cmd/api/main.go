@@ -32,7 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sqlDB.Close()
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("failed to close database: %v", err)
+		}
+	}()
 
 	if err := sqlDB.Ping(); err != nil {
 		log.Fatal(err)
@@ -50,7 +54,9 @@ func main() {
 	r.Use(corsMiddleware)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello World!"))
+		if _, err := w.Write([]byte("Hello World!")); err != nil {
+			log.Printf("failed to write root response: %v", err)
+		}
 	})
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +64,9 @@ func main() {
 			http.Error(w, "db not ready", http.StatusServiceUnavailable)
 			return
 		}
-		w.Write([]byte("ok"))
+		if _, err := w.Write([]byte("ok")); err != nil {
+			log.Printf("failed to write health response: %v", err)
+		}
 	})
 
 	r.Post("/api/players/search", playerSearchHandler.Search)

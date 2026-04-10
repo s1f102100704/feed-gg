@@ -1,6 +1,12 @@
-.PHONY: migrate-status migrate-up migrate-down migrate-reset migrate-create
+.PHONY: lint lint-backend migrate-status migrate-up migrate-down migrate-reset migrate-create
 
 MIGRATE = docker compose --profile tools run --rm migrate
+GOLANGCI_LINT = docker compose --profile tools run --rm golangci-lint
+
+lint: lint-backend
+
+lint-backend:
+	$(GOLANGCI_LINT) run
 
 migrate-status:
 	$(MIGRATE) status

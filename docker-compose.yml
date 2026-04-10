@@ -55,6 +55,20 @@ services:
       - GOOSE_MIGRATION_DIR=backend/migrations
     profiles:
       - tools
+  golangci-lint:
+    image: golangci/golangci-lint:v2.11.4
+    working_dir: /app
+    entrypoint: ["golangci-lint"]
+    volumes:
+      - ./backend:/app
+      - golangci-lint-cache:/root/.cache/golangci-lint
+      - golangci-go-build-cache:/root/.cache/go-build
+      - golangci-go-mod-cache:/go/pkg/mod
+    profiles:
+      - tools
 
 volumes:
   db-store:
+  golangci-lint-cache:
+  golangci-go-build-cache:
+  golangci-go-mod-cache:

@@ -14,6 +14,16 @@ Run:
 sqlc generate
 ```
 
+## Lint
+
+Go の lint は `golangci-lint` を Docker 経由で実行する。
+
+```bash
+make lint
+```
+
+初回実行時は `golangci/golangci-lint` イメージの取得が走る。
+
 
 /domain
 アプリの中心の型と業務ルール
