@@ -50,6 +50,7 @@ export function MatchHistoryPanel({ result }: MatchHistoryPanelProps) {
             key={match.matchId}
             assetVersion={assetVersion}
             match={match}
+            region={result.region}
             targetPUUID={result.puuid}
           />
         ))}

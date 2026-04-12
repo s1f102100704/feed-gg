@@ -18,7 +18,7 @@ export type Region =
   | "VN2";
 
 export type SearchResult = {
-  region: string;
+  region: Region;
   puuid: string;
   gameName: string;
   tagLine: string;

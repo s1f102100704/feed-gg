@@ -7,7 +7,7 @@ import {
   formatTimeAgo,
   groupParticipantsByTeam,
 } from "@/lib/match-history";
-import { MatchSummary } from "@/types/player-search";
+import { MatchSummary, Region } from "@/types/player-search";
 
 import { MatchChampionPortrait } from "./match-champion-portrait";
 import { MatchParticipantColumn } from "./match-participant-column";
@@ -15,12 +15,14 @@ import { MatchParticipantColumn } from "./match-participant-column";
 type MatchHistoryCardProps = {
   assetVersion: string;
   match: MatchSummary;
+  region: Region;
   targetPUUID: string;
 };
 
 export function MatchHistoryCard({
   assetVersion,
   match,
+  region,
   targetPUUID,
 }: MatchHistoryCardProps) {
   const { allies, enemies } = groupParticipantsByTeam(match, targetPUUID);
@@ -87,11 +89,13 @@ export function MatchHistoryCard({
           <MatchParticipantColumn
             assetVersion={assetVersion}
             participants={allies}
+            region={region}
             targetPUUID={targetPUUID}
           />
           <MatchParticipantColumn
             assetVersion={assetVersion}
             participants={enemies}
+            region={region}
             targetPUUID={targetPUUID}
           />
         </div>
