@@ -9,6 +9,7 @@ import (
 
 	httpadapter "feed-gg/backend/internal/adapter/http"
 	dbgen "feed-gg/backend/internal/infrastructure/db/sqlc"
+	"feed-gg/backend/internal/infrastructure/masterdata"
 	"feed-gg/backend/internal/infrastructure/riot"
 
 	"github.com/go-chi/chi/v5"
@@ -43,12 +44,14 @@ func main() {
 	}
 
 	queries := dbgen.New(sqlDB)
+	regionStore := masterdata.NewRegionStore(sqlDB)
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
 		log.Fatal("RIOT_API_KEY is not set")
 	}
 	riotClient := riot.NewClient(riotAPIKey)
-	playerSearchHandler := httpadapter.NewPlayerSearchHandler(riotClient)
+	playerSearchHandler := httpadapter.NewPlayerSearchHandler(riotClient, regionStore)
+	regionsHandler := httpadapter.NewRegionsHandler(regionStore)
 
 	r := chi.NewRouter()
 	r.Use(corsMiddleware)
@@ -71,6 +74,8 @@ func main() {
 
 	r.Post("/api/players/search", playerSearchHandler.Search)
 	r.Options("/api/players/search", playerSearchHandler.Search)
+	r.Get("/api/regions", regionsHandler.List)
+	r.Options("/api/regions", regionsHandler.List)
 
 	server := &http.Server{
 		Addr:              ":8080",
