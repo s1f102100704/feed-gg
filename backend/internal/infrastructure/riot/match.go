@@ -11,7 +11,7 @@ import (
 const (
 	matchIDsByPUUIDPathTemplate = "/lol/match/v5/matches/by-puuid/%s/ids"
 	matchPathTemplate           = "/lol/match/v5/matches/%s"
-	recentMatchCount            = 20
+	recentMatchCount            = 3
 )
 
 func (c *Client) fetchRecentMatchSummaries(
