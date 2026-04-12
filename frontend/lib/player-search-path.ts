@@ -1,25 +1,5 @@
 import { Region } from "@/types/player-search";
 
-export const regionOptions: Region[] = [
-  "KR",
-  "JP1",
-  "NA1",
-  "EUW1",
-  "EUN1",
-  "BR1",
-  "LA1",
-  "LA2",
-  "ME1",
-  "OC1",
-  "PH2",
-  "RU",
-  "SG2",
-  "TH2",
-  "TR1",
-  "TW2",
-  "VN2",
-];
-
 const regionPathSegmentMap: Record<Region, string> = {
   BR1: "br",
   EUN1: "eune",

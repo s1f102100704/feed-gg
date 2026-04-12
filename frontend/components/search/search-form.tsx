@@ -1,7 +1,7 @@
-import { regionOptions } from "@/lib/player-search-path";
 import { Region } from "@/types/player-search";
 
 type SearchFormProps = {
+  regions: Region[];
   region: Region;
   riotId: string;
   isLoading: boolean;
@@ -11,6 +11,7 @@ type SearchFormProps = {
 };
 
 export function SearchForm({
+  regions,
   region,
   riotId,
   isLoading,
@@ -28,7 +29,7 @@ export function SearchForm({
         onChange={(event) => onRegionChange(event.target.value as Region)}
         className="h-14 rounded-xl border border-white/10 bg-slate-950/80 px-4 text-sm text-white outline-none md:w-32"
       >
-        {regionOptions.map((option) => (
+        {regions.map((option) => (
           <option key={option} value={option} className="bg-slate-950">
             {option}
           </option>

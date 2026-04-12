@@ -12,7 +12,8 @@ import (
 )
 
 type PlayerSearchHandler struct {
-	riotClient PlayerSearcher
+	riotClient  PlayerSearcher
+	regionStore RegionChecker
 }
 
 type PlayerSearcher interface {
@@ -22,6 +23,10 @@ type PlayerSearcher interface {
 		gameName string,
 		tagLine string,
 	) (*riot.PlayerProfile, int, error)
+}
+
+type RegionChecker interface {
+	RegionExists(ctx context.Context, name string) (bool, error)
 }
 
 type playerSearchRequest struct {
@@ -36,8 +41,11 @@ type errorResponse struct {
 
 const playerSearchRequestBodyLimit = 1 << 10
 
-func NewPlayerSearchHandler(riotClient PlayerSearcher) *PlayerSearchHandler {
-	return &PlayerSearchHandler{riotClient: riotClient}
+func NewPlayerSearchHandler(riotClient PlayerSearcher, regionStore RegionChecker) *PlayerSearchHandler {
+	return &PlayerSearchHandler{
+		riotClient:  riotClient,
+		regionStore: regionStore,
+	}
 }
 
 func (h *PlayerSearchHandler) Search(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +67,16 @@ func (h *PlayerSearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	if req.Region == "" || req.GameName == "" || req.TagLine == "" {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "region, gameName, and tagLine are required"})
+		return
+	}
+
+	exists, err := h.regionStore.RegionExists(r.Context(), req.Region)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "failed to load region master"})
+		return
+	}
+	if !exists {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "unsupported region"})
 		return
 	}
 

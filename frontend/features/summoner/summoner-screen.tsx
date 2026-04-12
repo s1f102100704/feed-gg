@@ -11,6 +11,7 @@ import { SearchLoadingState } from "@/components/search/search-loading-state";
 import { SummonerHero } from "@/components/search/summoner-hero";
 import { SummonerContentLayout } from "@/components/summoner/summoner-content-layout";
 import { usePlayerSearch } from "@/hooks/use-player-search";
+import { useRegions } from "@/hooks/use-regions";
 import { buildSummonerPath } from "@/lib/player-search-path";
 import { Region } from "@/types/player-search";
 
@@ -31,6 +32,9 @@ export function SummonerScreen({
   const [region, setRegion] = useState<Region>(resolvedRegion ?? "JP1");
   const [riotId, setRiotId] = useState(initialRiotId);
   const { result, error, isLoading, searchPlayer, clearResult } = usePlayerSearch();
+  const { regions, error: regionsError } = useRegions();
+  const availableRegions = regions.length > 0 ? regions : [region];
+  const selectedRegion = availableRegions.includes(region) ? region : availableRegions[0];
 
   useEffect(() => {
     if (!resolvedRegion) {
@@ -50,7 +54,7 @@ export function SummonerScreen({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const nextPath = buildSummonerPath(region, riotId);
+    const nextPath = buildSummonerPath(selectedRegion, riotId);
     if (!nextPath) {
       return;
     }
@@ -69,7 +73,8 @@ export function SummonerScreen({
           </div>
 
           <SearchForm
-            region={region}
+            regions={availableRegions}
+            region={selectedRegion}
             riotId={riotId}
             isLoading={isLoading}
             onRegionChange={setRegion}
@@ -78,7 +83,9 @@ export function SummonerScreen({
           />
         </div>
 
-        {error ? <SearchErrorMessage message={error} /> : null}
+        {error || regionsError ? (
+          <SearchErrorMessage message={error || regionsError} />
+        ) : null}
 
         {result ? (
           <div className="space-y-6">
