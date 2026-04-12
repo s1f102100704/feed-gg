@@ -3,13 +3,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { MatchHistoryPanel } from "@/components/match/match-history-panel";
 import { RankPanel } from "@/components/rank/rank-panel";
 import { SearchErrorMessage } from "@/components/search/search-error-message";
 import { SearchForm } from "@/components/search/search-form";
 import { SearchLoadingState } from "@/components/search/search-loading-state";
 import { SummonerHero } from "@/components/search/summoner-hero";
 import { SummonerContentLayout } from "@/components/summoner/summoner-content-layout";
-import { SummonerContentPlaceholder } from "@/components/summoner/summoner-content-placeholder";
 import { usePlayerSearch } from "@/hooks/use-player-search";
 import { buildSummonerPath, Region } from "@/lib/player-search";
 
@@ -84,7 +84,7 @@ export function SummonerScreen({
             <SummonerHero result={result} />
             <SummonerContentLayout
               left={<RankPanel result={result} />}
-              right={<SummonerContentPlaceholder />}
+              right={<MatchHistoryPanel result={result} />}
             />
           </div>
         ) : (

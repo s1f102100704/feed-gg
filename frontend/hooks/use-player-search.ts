@@ -41,8 +41,12 @@ export function usePlayerSearch() {
         }
 
         const nextResult = payload as SearchResult;
-        setResult(nextResult);
-        return nextResult;
+        const normalizedResult: SearchResult = {
+          ...nextResult,
+          matches: nextResult.matches ?? [],
+        };
+        setResult(normalizedResult);
+        return normalizedResult;
       } catch {
         setResult(null);
         setError("backend へ接続できませんでした。");
