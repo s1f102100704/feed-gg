@@ -1,5 +1,5 @@
 import { resolveDataDragonVersion } from "@/lib/match-history";
-import { SearchResult } from "@/lib/player-search";
+import { SearchResult } from "@/types/player-search";
 
 import { MatchHistoryCard } from "./match-history-card";
 

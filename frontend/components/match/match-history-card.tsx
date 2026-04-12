@@ -7,7 +7,7 @@ import {
   formatTimeAgo,
   groupParticipantsByTeam,
 } from "@/lib/match-history";
-import { MatchSummary } from "@/lib/player-search";
+import { MatchSummary } from "@/types/player-search";
 
 import { MatchChampionPortrait } from "./match-champion-portrait";
 import { MatchParticipantColumn } from "./match-participant-column";

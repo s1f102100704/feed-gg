@@ -1,8 +1,5 @@
-import {
-  calculateWinRate,
-  formatTierText,
-  RankedQueue,
-} from "@/lib/player-search";
+import { calculateWinRate, formatTierText } from "@/lib/rank";
+import { RankedQueue } from "@/types/player-search";
 
 import { RankEmblem } from "./rank-emblem";
 

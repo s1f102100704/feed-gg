@@ -11,7 +11,8 @@ import { SearchLoadingState } from "@/components/search/search-loading-state";
 import { SummonerHero } from "@/components/search/summoner-hero";
 import { SummonerContentLayout } from "@/components/summoner/summoner-content-layout";
 import { usePlayerSearch } from "@/hooks/use-player-search";
-import { buildSummonerPath, Region } from "@/lib/player-search";
+import { buildSummonerPath } from "@/lib/player-search-path";
+import { Region } from "@/types/player-search";
 
 type SummonerScreenProps = {
   resolvedRegion: Region | null;

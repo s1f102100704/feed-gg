@@ -4,7 +4,7 @@ import {
   buildChampionIconUrl,
   formatParticipantName,
 } from "@/lib/match-history";
-import { MatchParticipant } from "@/lib/player-search";
+import { MatchParticipant } from "@/types/player-search";
 
 type MatchParticipantColumnProps = {
   assetVersion: string;

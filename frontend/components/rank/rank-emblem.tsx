@@ -1,6 +1,7 @@
 import Image from "next/image";
 
-import { getRankEmblemImageSrc, RankedQueue } from "@/lib/player-search";
+import { getRankEmblemImageSrc } from "@/lib/rank";
+import { RankedQueue } from "@/types/player-search";
 
 type RankEmblemProps = {
   rank?: RankedQueue;
