@@ -1,4 +1,4 @@
-import { SearchResult } from "@/lib/player-search";
+import { SearchResult } from "@/types/player-search";
 
 import { RankCard } from "./rank-card";
 

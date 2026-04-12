@@ -1,4 +1,5 @@
-import { Region, regionOptions } from "@/lib/player-search";
+import { regionOptions } from "@/lib/player-search-path";
+import { Region } from "@/types/player-search";
 
 type SearchFormProps = {
   region: Region;

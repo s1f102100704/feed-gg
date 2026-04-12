@@ -1,11 +1,7 @@
 import { useCallback, useState } from "react";
 
-import {
-  ApiError,
-  API_BASE_URL,
-  Region,
-  SearchResult,
-} from "@/lib/player-search";
+import { API_BASE_URL } from "@/lib/player-search-api";
+import { ApiError, Region, SearchResult } from "@/types/player-search";
 
 export function usePlayerSearch() {
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -41,8 +37,12 @@ export function usePlayerSearch() {
         }
 
         const nextResult = payload as SearchResult;
-        setResult(nextResult);
-        return nextResult;
+        const normalizedResult: SearchResult = {
+          ...nextResult,
+          matches: nextResult.matches ?? [],
+        };
+        setResult(normalizedResult);
+        return normalizedResult;
       } catch {
         setResult(null);
         setError("backend へ接続できませんでした。");

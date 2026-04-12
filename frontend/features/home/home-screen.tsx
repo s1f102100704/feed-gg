@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { FeedTitle } from "@/components/search/feed-title";
 import { SearchErrorMessage } from "@/components/search/search-error-message";
 import { SearchForm } from "@/components/search/search-form";
-import { buildSummonerPath, Region } from "@/lib/player-search";
+import { buildSummonerPath } from "@/lib/player-search-path";
+import { Region } from "@/types/player-search";
 
 export function HomeScreen() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { SearchResult } from "@/lib/player-search";
+import { SearchResult } from "@/types/player-search";
 
 type SummonerHeroProps = {
   result: SearchResult;

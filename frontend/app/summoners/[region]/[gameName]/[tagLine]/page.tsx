@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useParams } from "next/navigation";
 
 import { SummonerScreen } from "@/features/summoner/summoner-screen";
-import { pathSegmentToRegion } from "@/lib/player-search";
+import { pathSegmentToRegion } from "@/lib/player-search-path";
 
 type SummonerPageParams = {
   region: string;
