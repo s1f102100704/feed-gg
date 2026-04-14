@@ -103,8 +103,8 @@ INSERT INTO player (
   region_id
 ) VALUES (
   $1,
-  NULLIF(BTRIM($2), ''),
-  NULLIF(BTRIM($3), ''),
+  $2,
+  $3,
   $4
 )
 ON CONFLICT (puuid) DO UPDATE SET
@@ -116,10 +116,10 @@ RETURNING id, puuid, game_name, tag_line, region_id, profile_icon_id, summoner_l
 `
 
 type UpsertParticipantPlayerParams struct {
-	Puuid    string `json:"puuid"`
-	GameName string `json:"game_name"`
-	TagLine  string `json:"tag_line"`
-	RegionID int16  `json:"region_id"`
+	Puuid    string         `json:"puuid"`
+	GameName sql.NullString `json:"game_name"`
+	TagLine  sql.NullString `json:"tag_line"`
+	RegionID int16          `json:"region_id"`
 }
 
 func (q *Queries) UpsertParticipantPlayer(ctx context.Context, arg UpsertParticipantPlayerParams) (Player, error) {
@@ -158,8 +158,8 @@ INSERT INTO player (
   last_synced_at
 ) VALUES (
   $1,
-  NULLIF(BTRIM($2), ''),
-  NULLIF(BTRIM($3), ''),
+  $2,
+  $3,
   $4,
   $5,
   $6,
@@ -179,13 +179,13 @@ RETURNING id, puuid, game_name, tag_line, region_id, profile_icon_id, summoner_l
 `
 
 type UpsertPlayerProfileParams struct {
-	Puuid         string        `json:"puuid"`
-	GameName      string        `json:"game_name"`
-	TagLine       string        `json:"tag_line"`
-	RegionID      int16         `json:"region_id"`
-	ProfileIconID sql.NullInt32 `json:"profile_icon_id"`
-	SummonerLevel sql.NullInt64 `json:"summoner_level"`
-	RevisionDate  sql.NullTime  `json:"revision_date"`
+	Puuid         string         `json:"puuid"`
+	GameName      sql.NullString `json:"game_name"`
+	TagLine       sql.NullString `json:"tag_line"`
+	RegionID      int16          `json:"region_id"`
+	ProfileIconID sql.NullInt32  `json:"profile_icon_id"`
+	SummonerLevel sql.NullInt64  `json:"summoner_level"`
+	RevisionDate  sql.NullTime   `json:"revision_date"`
 }
 
 func (q *Queries) UpsertPlayerProfile(ctx context.Context, arg UpsertPlayerProfileParams) (Player, error) {

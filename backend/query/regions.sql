@@ -11,7 +11,7 @@ ORDER BY id;
 SELECT EXISTS (
   SELECT 1
   FROM region
-  WHERE name = UPPER(BTRIM(sqlc.arg(name)))
+  WHERE name = sqlc.arg(name)
 ) AS exists;
 
 -- name: GetRegionByName :one
@@ -21,4 +21,4 @@ SELECT
   created_at,
   updated_at
 FROM region
-WHERE name = UPPER(BTRIM(sqlc.arg(name)));
+WHERE name = sqlc.arg(name);

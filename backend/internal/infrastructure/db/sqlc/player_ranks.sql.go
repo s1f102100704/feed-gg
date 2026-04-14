@@ -17,8 +17,8 @@ SELECT
   created_at,
   updated_at
 FROM player_ranks
-WHERE tier = UPPER(BTRIM($1))
-  AND division = UPPER(BTRIM($2))
+WHERE tier = $1
+  AND division = $2
 `
 
 type GetPlayerRankByTierDivisionParams struct {

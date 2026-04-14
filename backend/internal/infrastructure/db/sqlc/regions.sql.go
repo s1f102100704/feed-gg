@@ -16,7 +16,7 @@ SELECT
   created_at,
   updated_at
 FROM region
-WHERE name = UPPER(BTRIM($1))
+WHERE name = $1
 `
 
 func (q *Queries) GetRegionByName(ctx context.Context, name string) (Region, error) {
@@ -73,7 +73,7 @@ const regionExists = `-- name: RegionExists :one
 SELECT EXISTS (
   SELECT 1
   FROM region
-  WHERE name = UPPER(BTRIM($1))
+  WHERE name = $1
 ) AS exists
 `
 

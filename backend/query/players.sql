@@ -39,8 +39,8 @@ INSERT INTO player (
   last_synced_at
 ) VALUES (
   sqlc.arg(puuid),
-  NULLIF(BTRIM(sqlc.arg(game_name)), ''),
-  NULLIF(BTRIM(sqlc.arg(tag_line)), ''),
+  sqlc.arg(game_name),
+  sqlc.arg(tag_line),
   sqlc.arg(region_id),
   sqlc.arg(profile_icon_id),
   sqlc.arg(summoner_level),
@@ -66,8 +66,8 @@ INSERT INTO player (
   region_id
 ) VALUES (
   sqlc.arg(puuid),
-  NULLIF(BTRIM(sqlc.arg(game_name)), ''),
-  NULLIF(BTRIM(sqlc.arg(tag_line)), ''),
+  sqlc.arg(game_name),
+  sqlc.arg(tag_line),
   sqlc.arg(region_id)
 )
 ON CONFLICT (puuid) DO UPDATE SET

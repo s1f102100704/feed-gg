@@ -116,12 +116,12 @@ INSERT INTO match_participant (
 ) VALUES (
   $1,
   $2,
-  NULLIF(BTRIM($3), ''),
-  NULLIF(BTRIM($4), ''),
+  $3,
+  $4,
   $5,
   $6,
-  NULLIF(BTRIM($7), ''),
-  NULLIF(BTRIM($8), ''),
+  $7,
+  $8,
   $9,
   $10,
   $11,
@@ -146,20 +146,20 @@ ON CONFLICT (match_history_id, player_id) DO UPDATE SET
 `
 
 type UpsertMatchParticipantParams struct {
-	MatchHistoryID   int64  `json:"match_history_id"`
-	PlayerID         int64  `json:"player_id"`
-	GameNameSnapshot string `json:"game_name_snapshot"`
-	TagLineSnapshot  string `json:"tag_line_snapshot"`
-	TeamID           int16  `json:"team_id"`
-	ChampionName     string `json:"champion_name"`
-	TeamPosition     string `json:"team_position"`
-	Role             string `json:"role"`
-	Win              bool   `json:"win"`
-	Kills            int32  `json:"kills"`
-	Deaths           int32  `json:"deaths"`
-	Assists          int32  `json:"assists"`
-	SummonerSpell1ID int32  `json:"summoner_spell1_id"`
-	SummonerSpell2ID int32  `json:"summoner_spell2_id"`
+	MatchHistoryID   int64          `json:"match_history_id"`
+	PlayerID         int64          `json:"player_id"`
+	GameNameSnapshot sql.NullString `json:"game_name_snapshot"`
+	TagLineSnapshot  sql.NullString `json:"tag_line_snapshot"`
+	TeamID           int16          `json:"team_id"`
+	ChampionName     string         `json:"champion_name"`
+	TeamPosition     sql.NullString `json:"team_position"`
+	Role             sql.NullString `json:"role"`
+	Win              bool           `json:"win"`
+	Kills            int32          `json:"kills"`
+	Deaths           int32          `json:"deaths"`
+	Assists          int32          `json:"assists"`
+	SummonerSpell1ID int32          `json:"summoner_spell1_id"`
+	SummonerSpell2ID int32          `json:"summoner_spell2_id"`
 }
 
 func (q *Queries) UpsertMatchParticipant(ctx context.Context, arg UpsertMatchParticipantParams) error {
