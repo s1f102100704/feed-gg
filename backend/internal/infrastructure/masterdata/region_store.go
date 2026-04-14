@@ -2,65 +2,32 @@ package masterdata
 
 import (
 	"context"
-	"database/sql"
-	"strings"
+
+	db "feed-gg/backend/internal/infrastructure/db/sqlc"
 )
 
 type RegionStore struct {
-	db *sql.DB
+	queries *db.Queries
 }
 
-func NewRegionStore(db *sql.DB) *RegionStore {
-	return &RegionStore{db: db}
+func NewRegionStore(queries *db.Queries) *RegionStore {
+	return &RegionStore{queries: queries}
 }
 
 func (s *RegionStore) RegionExists(ctx context.Context, name string) (bool, error) {
-	const query = `
-		SELECT EXISTS(
-			SELECT 1
-			FROM region
-			WHERE name = $1
-		)
-	`
-
-	var exists bool
-	err := s.db.QueryRowContext(ctx, query, normalizeRegionName(name)).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
+	return s.queries.RegionExists(ctx, name)
 }
 
 func (s *RegionStore) ListRegionNames(ctx context.Context) ([]string, error) {
-	const query = `
-		SELECT name
-		FROM region
-		ORDER BY id
-	`
-
-	rows, err := s.db.QueryContext(ctx, query)
+	regions, err := s.queries.ListRegions(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	regions := make([]string, 0)
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
-		}
-		regions = append(regions, name)
+	names := make([]string, 0, len(regions))
+	for _, region := range regions {
+		names = append(names, region.Name)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return regions, nil
-}
-
-func normalizeRegionName(name string) string {
-	return strings.ToUpper(strings.TrimSpace(name))
+	return names, nil
 }

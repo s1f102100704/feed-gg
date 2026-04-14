@@ -44,7 +44,7 @@ func main() {
 	}
 
 	queries := dbgen.New(sqlDB)
-	regionStore := masterdata.NewRegionStore(sqlDB)
+	regionStore := masterdata.NewRegionStore(queries)
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
 		log.Fatal("RIOT_API_KEY is not set")
