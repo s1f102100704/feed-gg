@@ -110,9 +110,10 @@ func TestPlayerSearchExecuteReturnsMappedResult(t *testing.T) {
 			Matches: []riot.MatchSummary{
 				{
 					MatchID:      "JP1_1",
+					TeamID:       100,
 					ChampionName: "Ahri",
 					Participants: []riot.MatchParticipantSummary{
-						{PUUID: "test-puuid", GameName: "hide on bush", TagLine: "KR1"},
+						{PUUID: "test-puuid", GameName: "hide on bush", TagLine: "KR1", TeamID: 100},
 					},
 				},
 			},
@@ -144,6 +145,9 @@ func TestPlayerSearchExecuteReturnsMappedResult(t *testing.T) {
 	}
 	if len(result.Matches) != 1 || len(result.Matches[0].Participants) != 1 {
 		t.Fatalf("result.Matches = %+v, want one mapped match", result.Matches)
+	}
+	if result.Matches[0].TeamID != 100 || result.Matches[0].Participants[0].TeamID != 100 {
+		t.Fatalf("team ids = %+v, want 100", result.Matches[0])
 	}
 	if searcher.gotRegion != "JP1" || searcher.gotGameName != "hide on bush" || searcher.gotTagLine != "KR1" {
 		t.Fatalf(

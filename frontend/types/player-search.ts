@@ -43,6 +43,7 @@ export type MatchParticipant = {
   puuid: string;
   gameName: string;
   tagLine: string;
+  teamId: number;
   championName: string;
   role: string;
   win: boolean;
@@ -59,6 +60,7 @@ export type MatchSummary = {
   gameVersion: string;
   gameMode: string;
   queueId: number;
+  teamId: number;
   championName: string;
   role: string;
   win: boolean;

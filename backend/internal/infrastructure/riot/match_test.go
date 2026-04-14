@@ -22,6 +22,7 @@ func TestMapMatchSummary(t *testing.T) {
 					RiotIDGameName: "target",
 					RiotIDTagline:  "JP1",
 					PUUID:          "target-puuid",
+					TeamID:         100,
 					ChampionName:   "Ahri",
 					TeamPosition:   "MIDDLE",
 					Kills:          10,
@@ -35,6 +36,7 @@ func TestMapMatchSummary(t *testing.T) {
 					RiotIDGameName: "teammate",
 					RiotIDTagline:  "KR1",
 					PUUID:          "teammate-puuid",
+					TeamID:         100,
 					ChampionName:   "LeeSin",
 					TeamPosition:   "JUNGLE",
 					Kills:          4,
@@ -61,6 +63,9 @@ func TestMapMatchSummary(t *testing.T) {
 	}
 	if summary.QueueID != 420 {
 		t.Fatalf("QueueID = %d, want 420", summary.QueueID)
+	}
+	if summary.TeamID != 100 {
+		t.Fatalf("TeamID = %d, want 100", summary.TeamID)
 	}
 	if summary.ChampionName != "Ahri" {
 		t.Fatalf("ChampionName = %q, want Ahri", summary.ChampionName)
@@ -96,6 +101,9 @@ func TestMapMatchSummary(t *testing.T) {
 	}
 	if summary.Participants[1].Role != "JUNGLE" {
 		t.Fatalf("Participants[1].Role = %q, want JUNGLE", summary.Participants[1].Role)
+	}
+	if summary.Participants[0].TeamID != 100 {
+		t.Fatalf("Participants[0].TeamID = %d, want 100", summary.Participants[0].TeamID)
 	}
 }
 
