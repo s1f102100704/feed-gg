@@ -3,30 +3,22 @@ package httpadapter
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"strings"
 
-	"feed-gg/backend/internal/infrastructure/riot"
+	"feed-gg/backend/internal/usecase"
 )
 
 type PlayerSearchHandler struct {
-	riotClient  PlayerSearcher
-	regionStore RegionChecker
+	usecase PlayerSearchUsecase
 }
 
-type PlayerSearcher interface {
-	SearchPlayerByRiotID(
+type PlayerSearchUsecase interface {
+	Execute(
 		ctx context.Context,
-		platformRegion string,
-		gameName string,
-		tagLine string,
-	) (*riot.PlayerProfile, int, error)
-}
-
-type RegionChecker interface {
-	RegionExists(ctx context.Context, name string) (bool, error)
+		input usecase.PlayerSearchInput,
+	) (*usecase.PlayerSearchResult, int, error)
 }
 
 type playerSearchRequest struct {
@@ -41,10 +33,9 @@ type errorResponse struct {
 
 const playerSearchRequestBodyLimit = 1 << 10
 
-func NewPlayerSearchHandler(riotClient PlayerSearcher, regionStore RegionChecker) *PlayerSearchHandler {
+func NewPlayerSearchHandler(usecase PlayerSearchUsecase) *PlayerSearchHandler {
 	return &PlayerSearchHandler{
-		riotClient:  riotClient,
-		regionStore: regionStore,
+		usecase: usecase,
 	}
 }
 
@@ -70,22 +61,12 @@ func (h *PlayerSearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists, err := h.regionStore.RegionExists(r.Context(), req.Region)
+	player, statusCode, err := h.usecase.Execute(r.Context(), usecase.PlayerSearchInput{
+		Region:   req.Region,
+		GameName: req.GameName,
+		TagLine:  req.TagLine,
+	})
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "failed to load region master"})
-		return
-	}
-	if !exists {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "unsupported region"})
-		return
-	}
-
-	player, statusCode, err := h.riotClient.SearchPlayerByRiotID(r.Context(), req.Region, req.GameName, req.TagLine)
-	if err != nil {
-		if errors.Is(err, riot.ErrInvalidRegion) {
-			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "unsupported region"})
-			return
-		}
 		writeJSON(w, statusCode, errorResponse{Error: err.Error()})
 		return
 	}
