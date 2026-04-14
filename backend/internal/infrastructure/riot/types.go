@@ -54,6 +54,7 @@ type MatchParticipantDTO struct {
 	RiotIDGameName     string `json:"riotIdGameName"`
 	RiotIDTagline      string `json:"riotIdTagline"`
 	PUUID              string `json:"puuid"`
+	TeamID             int    `json:"teamId"`
 	ChampionName       string `json:"championName"`
 	TeamPosition       string `json:"teamPosition"`
 	IndividualPosition string `json:"individualPosition"`
@@ -70,6 +71,7 @@ type MatchParticipantSummary struct {
 	PUUID            string `json:"puuid"`
 	GameName         string `json:"gameName"`
 	TagLine          string `json:"tagLine"`
+	TeamID           int    `json:"teamId"`
 	ChampionName     string `json:"championName"`
 	Role             string `json:"role"`
 	Win              bool   `json:"win"`
@@ -86,6 +88,7 @@ type MatchSummary struct {
 	GameVersion      string                    `json:"gameVersion"`
 	GameMode         string                    `json:"gameMode"`
 	QueueID          int                       `json:"queueId"`
+	TeamID           int                       `json:"teamId"`
 	ChampionName     string                    `json:"championName"`
 	Role             string                    `json:"role"`
 	Win              bool                      `json:"win"`

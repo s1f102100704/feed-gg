@@ -63,6 +63,7 @@ type MatchParticipant struct {
 	PUUID            string `json:"puuid"`
 	GameName         string `json:"gameName"`
 	TagLine          string `json:"tagLine"`
+	TeamID           int    `json:"teamId"`
 	ChampionName     string `json:"championName"`
 	Role             string `json:"role"`
 	Win              bool   `json:"win"`
@@ -79,6 +80,7 @@ type MatchSummary struct {
 	GameVersion      string             `json:"gameVersion"`
 	GameMode         string             `json:"gameMode"`
 	QueueID          int                `json:"queueId"`
+	TeamID           int                `json:"teamId"`
 	ChampionName     string             `json:"championName"`
 	Role             string             `json:"role"`
 	Win              bool               `json:"win"`
@@ -169,6 +171,7 @@ func mapMatchSummaries(matches []riot.MatchSummary) []MatchSummary {
 			GameVersion:      match.GameVersion,
 			GameMode:         match.GameMode,
 			QueueID:          match.QueueID,
+			TeamID:           match.TeamID,
 			ChampionName:     match.ChampionName,
 			Role:             match.Role,
 			Win:              match.Win,
@@ -192,6 +195,7 @@ func mapMatchParticipants(participants []riot.MatchParticipantSummary) []MatchPa
 			PUUID:            participant.PUUID,
 			GameName:         participant.GameName,
 			TagLine:          participant.TagLine,
+			TeamID:           participant.TeamID,
 			ChampionName:     participant.ChampionName,
 			Role:             participant.Role,
 			Win:              participant.Win,
