@@ -3,3 +3,115 @@
 //   sqlc v1.30.0
 
 package db
+
+import (
+	"database/sql"
+	"time"
+)
+
+type MatchHistory struct {
+	ID              int64     `json:"id"`
+	MatchID         string    `json:"match_id"`
+	RegionID        int16     `json:"region_id"`
+	QueueID         int32     `json:"queue_id"`
+	GameMode        string    `json:"game_mode"`
+	GameVersion     string    `json:"game_version"`
+	DurationSeconds int32     `json:"duration_seconds"`
+	PlayedAt        time.Time `json:"played_at"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+type MatchParticipant struct {
+	MatchHistoryID   int64          `json:"match_history_id"`
+	PlayerID         int64          `json:"player_id"`
+	GameNameSnapshot sql.NullString `json:"game_name_snapshot"`
+	TagLineSnapshot  sql.NullString `json:"tag_line_snapshot"`
+	TeamID           int16          `json:"team_id"`
+	ChampionName     string         `json:"champion_name"`
+	TeamPosition     sql.NullString `json:"team_position"`
+	Role             sql.NullString `json:"role"`
+	Win              bool           `json:"win"`
+	Kills            int32          `json:"kills"`
+	Deaths           int32          `json:"deaths"`
+	Assists          int32          `json:"assists"`
+	SummonerSpell1ID int32          `json:"summoner_spell1_id"`
+	SummonerSpell2ID int32          `json:"summoner_spell2_id"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+type Player struct {
+	ID            int64          `json:"id"`
+	Puuid         string         `json:"puuid"`
+	GameName      sql.NullString `json:"game_name"`
+	TagLine       sql.NullString `json:"tag_line"`
+	RegionID      int16          `json:"region_id"`
+	ProfileIconID sql.NullInt32  `json:"profile_icon_id"`
+	SummonerLevel sql.NullInt64  `json:"summoner_level"`
+	RevisionDate  sql.NullTime   `json:"revision_date"`
+	LastSyncedAt  sql.NullTime   `json:"last_synced_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+}
+
+type PlayerCurrentRank struct {
+	PlayerID      int64         `json:"player_id"`
+	QueueType     string        `json:"queue_type"`
+	PlayerRanksID sql.NullInt16 `json:"player_ranks_id"`
+	LeaguePoints  sql.NullInt32 `json:"league_points"`
+	Wins          sql.NullInt32 `json:"wins"`
+	Losses        sql.NullInt32 `json:"losses"`
+	RecordedAt    time.Time     `json:"recorded_at"`
+	CreatedAt     time.Time     `json:"created_at"`
+	UpdatedAt     time.Time     `json:"updated_at"`
+}
+
+type PlayerRank struct {
+	ID        int16     `json:"id"`
+	Tier      string    `json:"tier"`
+	Division  string    `json:"division"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type PlayerRankHistory struct {
+	ID            int64     `json:"id"`
+	PlayerID      int64     `json:"player_id"`
+	QueueType     string    `json:"queue_type"`
+	PlayerRanksID int16     `json:"player_ranks_id"`
+	LeaguePoints  int32     `json:"league_points"`
+	SeasonID      int16     `json:"season_id"`
+	RecordedAt    time.Time `json:"recorded_at"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type PlayerTag struct {
+	PlayerID  int64     `json:"player_id"`
+	TagID     int16     `json:"tag_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Region struct {
+	ID        int16     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Season struct {
+	ID        int16     `json:"id"`
+	Name      string    `json:"name"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Tag struct {
+	ID        int16     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
