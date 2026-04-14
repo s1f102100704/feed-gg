@@ -11,6 +11,7 @@ import (
 	dbgen "feed-gg/backend/internal/infrastructure/db/sqlc"
 	"feed-gg/backend/internal/infrastructure/masterdata"
 	"feed-gg/backend/internal/infrastructure/riot"
+	"feed-gg/backend/internal/usecase"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -50,7 +51,8 @@ func main() {
 		log.Fatal("RIOT_API_KEY is not set")
 	}
 	riotClient := riot.NewClient(riotAPIKey)
-	playerSearchHandler := httpadapter.NewPlayerSearchHandler(riotClient, regionStore)
+	playerSearchUsecase := usecase.NewPlayerSearch(riotClient, regionStore)
+	playerSearchHandler := httpadapter.NewPlayerSearchHandler(playerSearchUsecase)
 	regionsHandler := httpadapter.NewRegionsHandler(regionStore)
 
 	r := chi.NewRouter()
