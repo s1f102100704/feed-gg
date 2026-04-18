@@ -50,9 +50,12 @@ func TestPlayerSearchHandler_Search(t *testing.T) {
 			wantBody:       "{\"region\":\"JP1\",\"puuid\":\"test-puuid\",\"gameName\":\"hide on bush\",\"tagLine\":\"KR1\",\"summonerLevel\":0,\"profileIconId\":0,\"profileIconUrl\":\"\",\"revisionDate\":0}\n",
 		},
 		{
-			name:           "returns bad request for missing required fields",
-			body:           `{"region":"JP1","gameName":"","tagLine":"KR1"}`,
-			searchUsecase:  &fakePlayerSearchUsecase{},
+			name: "returns bad request for missing required fields",
+			body: `{"region":"JP1","gameName":"","tagLine":"KR1"}`,
+			searchUsecase: &fakePlayerSearchUsecase{
+				statusCode: http.StatusBadRequest,
+				err:        usecase.ErrInvalidPlayerSearchInput,
+			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "{\"error\":\"region, gameName, and tagLine are required\"}\n",
 		},

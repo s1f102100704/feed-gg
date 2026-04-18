@@ -83,7 +83,48 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 2. `Riot API` 取得
 3. `PlayerSearchResult` に変換して返す
 
-### Step 2: DB Save
+### Step 2: Normalize Search Input
+
+状態: 完了
+
+目的:
+
+- cache key / DB lookup / Riot request の入力を先に揃える
+- Step 4 以降の DB-first / cache-aside で同一入力が同一キーへ乗るようにする
+
+実装済み内容:
+
+- [backend/internal/usecase/player_search.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search.go)
+  - `PlayerSearchInput.Normalize()` を追加
+  - `PlayerSearchInput.Validate()` を追加
+  - `Execute` の入口で正規化と必須チェックを行うよう変更
+  - `NewPlayerSearchKey` も正規化済み入力を使うよう変更
+- [backend/internal/adapter/http/player_search.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/adapter/http/player_search.go)
+  - trim / 必須チェックを usecase 側へ寄せ、HTTP 層は request decode に専念する形へ整理
+- [backend/internal/usecase/player_search_test.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search_test.go)
+  - 入力正規化と空文字エラーのテストを追加
+- [backend/internal/adapter/http/player_search_test.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/adapter/http/player_search_test.go)
+  - usecase 側の入力エラー返却に合わせて期待値を更新
+
+実装要件:
+
+- `PlayerSearchInput` を usecase 入口で正規化する
+- 正規化後の値を以下の全てで共通利用する
+  - `region` マスタ確認
+  - `NewPlayerSearchKey`
+  - `repository.FindSavedPlayer`
+  - `riotGateway.SearchPlayerByRiotID`
+- 正規化ルールは少なくとも以下を含める
+  - `region` の trim / uppercase
+  - `gameName`, `tagLine` の trim
+  - 空文字判定
+
+完了条件:
+
+- `" JP1 "`, `"jp1"` が同じ `region` として扱われる
+- `" hide on bush "` と `"hide on bush"` が cache / DB / Riot で同じ検索キーになる
+
+### Step 3: DB Save
 
 状態: 未着手
 
@@ -103,6 +144,10 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
   4. `match_history` を upsert する
   5. `match_participant` 用に参加者の `player` を最小情報で upsert する
   6. `match_participant` を upsert する
+- Riot DTO の時刻値は DB 保存前に明示的に変換する
+  - `revisionDate`
+  - `recordedAt`
+  - `playedAt`
 
 使う query:
 
@@ -117,7 +162,7 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 - `SaveFetchedPlayer(ctx, fetched)` で DB 保存が最後まで通る
 
-### Step 3: DB Read
+### Step 4: DB Read
 
 状態: 未着手
 
@@ -135,12 +180,16 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
   - `ListRecentMatchHistoriesByPlayerID`
   - `ListMatchParticipantsByMatchHistoryID`
 - DB の row shape ではなく `PlayerSearchResult` を返す
+- `profileIconUrl` は DB に保存しない前提で、保存済みの `profileIconId` から復元する
+  - Riot 直取得時と DB read 時で同じ URL 組み立てロジックを共有する
+  - Data Dragon version の取得失敗時の fallback もこの段階で決める
 
 完了条件:
 
 - `FindSavedPlayer(ctx, input)` だけで検索結果を返せる
+- Riot 取得時と DB 取得時で `profileIconUrl` の返り値がぶれない
 
-### Step 4: Usecase Switch To DB-First
+### Step 5: Usecase Switch To DB-First
 
 状態: 未着手
 
@@ -151,19 +200,20 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 実装要件:
 
 - [backend/internal/usecase/player_search.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search.go) の `Execute` を以下へ変更する
-  1. `region` マスタ確認
-  2. `repository.FindSavedPlayer`
-  3. DB hit なら返す
-  4. DB miss なら `riotGateway.SearchPlayerByRiotID`
-  5. `repository.SaveFetchedPlayer`
-  6. `mapPlayerSearchResult(...)` して返す
+  1. 入力正規化
+  2. `region` マスタ確認
+  3. `repository.FindSavedPlayer`
+  4. DB hit なら返す
+  5. DB miss なら `riotGateway.SearchPlayerByRiotID`
+  6. `repository.SaveFetchedPlayer`
+  7. `mapPlayerSearchResult(...)` して返す
 
 完了条件:
 
 - 初回検索は Riot API 経由
 - 2回目検索は DB 経由
 
-### Step 5: Cache-Aside
+### Step 6: Cache-Aside
 
 状態: 未着手
 
@@ -175,22 +225,23 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 - `go-cache` を導入する
 - `PlayerSearchCache` の本実装を追加する
-- `PlayerSearchKey` を使って `cache.Get/Set` する
+- 正規化済み `PlayerSearchKey` を使って `cache.Get/Set` する
 - まずは positive cache のみ
 - `Execute` の流れを以下へ拡張する
-  1. `region` マスタ確認
-  2. `key := NewPlayerSearchKey(input)`
-  3. `cache.Get`
-  4. miss の場合だけ `repository.FindSavedPlayer`
-  5. DB hit なら `cache.Set`
-  6. DB miss なら Riot -> save -> `cache.Set`
+  1. 入力正規化
+  2. `region` マスタ確認
+  3. `key := NewPlayerSearchKey(input)`
+  4. `cache.Get`
+  5. miss の場合だけ `repository.FindSavedPlayer`
+  6. DB hit なら `cache.Set`
+  7. DB miss なら Riot -> save -> `cache.Set`
 
 完了条件:
 
 - `cache hit -> 即 return`
 - `cache miss -> DB or Riot`
 
-### Step 6: Riot API Parallelization
+### Step 7: Riot API Parallelization
 
 状態: 未着手
 
@@ -211,26 +262,22 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 - 挙動は変えずに応答時間を改善できる
 
-### Step 7: Normalize And Error Handling
+### Step 8: Snapshot Normalize And Error Handling
 
 状態: 未着手
 
 目的:
 
-- 入力の一貫性とエラーの扱いを仕上げる
+- DB に保存する snapshot 値の一貫性とエラーの扱いを仕上げる
 
 実装要件:
 
-- Go 側で入力正規化する
-  - `region` の trim / uppercase
-  - `gameName`, `tagLine` の trim
-  - 空文字判定
-  - rank / participant snapshot の正規化
+- rank / participant snapshot の正規化
 - Riot 404 / 429 / 5xx の backend エラー方針を決める
 
 完了条件:
 
-- cache key, DB lookup, Riot request の入力が揃う
+- rank / participant snapshot の保存値が揃う
 - frontend が Riot 依存のエラーメッセージに引っ張られない
 
 ## Notes For Next Implementation Chat
@@ -240,4 +287,4 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 - `riot.PlayerProfile` は取得専用の型として扱う
 - `update/refresh` 系の経路は今は実装対象外
 - `Riot API` を待ちながら transaction を開かない
-- `Step 2 -> Step 3 -> Step 4 -> Step 5` の順で進める
+- `Step 2 -> Step 3 -> Step 4 -> Step 5 -> Step 6` の順で進める

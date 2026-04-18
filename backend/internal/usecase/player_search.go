@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"feed-gg/backend/internal/infrastructure/riot"
 )
 
 var (
-	ErrUnsupportedRegion       = errors.New("unsupported region")
-	ErrRegionMasterUnavailable = errors.New("failed to load region master")
+	ErrInvalidPlayerSearchInput = errors.New("region, gameName, and tagLine are required")
+	ErrUnsupportedRegion        = errors.New("unsupported region")
+	ErrRegionMasterUnavailable  = errors.New("failed to load region master")
 )
 
 type PlayerSearch struct {
@@ -108,7 +110,23 @@ type MatchSummary struct {
 }
 
 func NewPlayerSearchKey(input PlayerSearchInput) PlayerSearchKey {
+	input = input.Normalize()
 	return PlayerSearchKey(input.Region + ":" + input.GameName + ":" + input.TagLine)
+}
+
+func (i PlayerSearchInput) Normalize() PlayerSearchInput {
+	return PlayerSearchInput{
+		Region:   strings.ToUpper(strings.TrimSpace(i.Region)),
+		GameName: strings.TrimSpace(i.GameName),
+		TagLine:  strings.TrimSpace(i.TagLine),
+	}
+}
+
+func (i PlayerSearchInput) Validate() error {
+	if i.Region == "" || i.GameName == "" || i.TagLine == "" {
+		return ErrInvalidPlayerSearchInput
+	}
+	return nil
 }
 
 func NewPlayerSearch(
@@ -129,6 +147,11 @@ func (u *PlayerSearch) Execute(
 	ctx context.Context,
 	input PlayerSearchInput,
 ) (*PlayerSearchResult, int, error) {
+	input = input.Normalize()
+	if err := input.Validate(); err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
 	exists, err := u.regionChecker.RegionExists(ctx, input.Region)
 	if err != nil {
 		return nil, http.StatusInternalServerError, ErrRegionMasterUnavailable

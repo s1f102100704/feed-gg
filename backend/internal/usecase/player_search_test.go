@@ -19,8 +19,9 @@ type fakePlayerSearcher struct {
 }
 
 type fakeRegionChecker struct {
-	exists bool
-	err    error
+	exists  bool
+	err     error
+	gotName string
 }
 
 type fakePlayerSearchCache struct{}
@@ -40,6 +41,7 @@ func (f *fakePlayerSearcher) SearchPlayerByRiotID(
 }
 
 func (f *fakeRegionChecker) RegionExists(ctx context.Context, name string) (bool, error) {
+	f.gotName = name
 	return f.exists, f.err
 }
 
@@ -115,6 +117,84 @@ func TestPlayerSearchExecuteReturnsMasterLookupFailure(t *testing.T) {
 	}
 	if !errors.Is(err, ErrRegionMasterUnavailable) {
 		t.Fatalf("err = %v, want ErrRegionMasterUnavailable", err)
+	}
+}
+
+func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
+	t.Parallel()
+
+	searcher := &fakePlayerSearcher{
+		player:     &riot.PlayerProfile{Region: "JP1", GameName: "hide on bush", TagLine: "KR1"},
+		statusCode: http.StatusOK,
+	}
+	regionChecker := &fakeRegionChecker{exists: true}
+	usecase := NewPlayerSearch(
+		&fakePlayerSearchCache{},
+		&fakePlayerSearchRepository{},
+		searcher,
+		regionChecker,
+	)
+
+	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
+		Region:   " jp1 ",
+		GameName: " hide on bush ",
+		TagLine:  " KR1 ",
+	})
+
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	if statusCode != http.StatusOK {
+		t.Fatalf("statusCode = %d, want %d", statusCode, http.StatusOK)
+	}
+	if result == nil {
+		t.Fatal("result = nil, want non-nil")
+	}
+	if regionChecker.gotName != "JP1" {
+		t.Fatalf("region checker got %q, want JP1", regionChecker.gotName)
+	}
+	if searcher.gotRegion != "JP1" || searcher.gotGameName != "hide on bush" || searcher.gotTagLine != "KR1" {
+		t.Fatalf(
+			"riot client called with %q %q %q, want JP1 hide on bush KR1",
+			searcher.gotRegion,
+			searcher.gotGameName,
+			searcher.gotTagLine,
+		)
+	}
+}
+
+func TestPlayerSearchExecuteReturnsInvalidInputAfterNormalization(t *testing.T) {
+	t.Parallel()
+
+	searcher := &fakePlayerSearcher{}
+	regionChecker := &fakeRegionChecker{exists: true}
+	usecase := NewPlayerSearch(
+		&fakePlayerSearchCache{},
+		&fakePlayerSearchRepository{},
+		searcher,
+		regionChecker,
+	)
+
+	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
+		Region:   "   ",
+		GameName: " hide on bush ",
+		TagLine:  " KR1 ",
+	})
+
+	if result != nil {
+		t.Fatalf("result = %+v, want nil", result)
+	}
+	if statusCode != http.StatusBadRequest {
+		t.Fatalf("statusCode = %d, want %d", statusCode, http.StatusBadRequest)
+	}
+	if !errors.Is(err, ErrInvalidPlayerSearchInput) {
+		t.Fatalf("err = %v, want ErrInvalidPlayerSearchInput", err)
+	}
+	if regionChecker.gotName != "" {
+		t.Fatalf("region checker got %q, want not called", regionChecker.gotName)
+	}
+	if searcher.gotRegion != "" {
+		t.Fatalf("riot client got region %q, want not called", searcher.gotRegion)
 	}
 }
 
@@ -222,5 +302,19 @@ func TestPlayerSearchExecuteMapsRiotInvalidRegion(t *testing.T) {
 	}
 	if !errors.Is(err, ErrUnsupportedRegion) {
 		t.Fatalf("err = %v, want ErrUnsupportedRegion", err)
+	}
+}
+
+func TestNewPlayerSearchKeyNormalizesInput(t *testing.T) {
+	t.Parallel()
+
+	key := NewPlayerSearchKey(PlayerSearchInput{
+		Region:   " jp1 ",
+		GameName: " hide on bush ",
+		TagLine:  " KR1 ",
+	})
+
+	if key != PlayerSearchKey("JP1:hide on bush:KR1") {
+		t.Fatalf("key = %q, want %q", key, PlayerSearchKey("JP1:hide on bush:KR1"))
 	}
 }

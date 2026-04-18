@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"feed-gg/backend/internal/usecase"
 )
@@ -49,15 +48,6 @@ func (h *PlayerSearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, playerSearchRequestBodyLimit)
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
-		return
-	}
-
-	req.Region = strings.TrimSpace(req.Region)
-	req.GameName = strings.TrimSpace(req.GameName)
-	req.TagLine = strings.TrimSpace(req.TagLine)
-
-	if req.Region == "" || req.GameName == "" || req.TagLine == "" {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "region, gameName, and tagLine are required"})
 		return
 	}
 
