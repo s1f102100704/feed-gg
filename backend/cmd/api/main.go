@@ -49,12 +49,12 @@ func main() {
 	queries := dbgen.New(sqlDB)
 	regionStore := masterdata.NewRegionStore(queries)
 	playerSearchCache := cacheinfra.NewNoopPlayerSearchCache()
-	playerSearchRepository := playersearchinfra.NewRepository(sqlDB, queries)
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
 		log.Fatal("RIOT_API_KEY is not set")
 	}
 	riotClient := riot.NewClient(riotAPIKey)
+	playerSearchRepository := playersearchinfra.NewRepository(sqlDB, queries, riotClient)
 	playerSearchUsecase := usecase.NewPlayerSearch(
 		playerSearchCache,
 		playerSearchRepository,

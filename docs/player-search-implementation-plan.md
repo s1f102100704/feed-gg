@@ -178,11 +178,30 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 ### Step 4: DB Read
 
-状態: 未着手
+状態: 完了
 
 目的:
 
 - `region + gameName + tagLine` から保存済みプレイヤーを組み立てて返せるようにする
+
+実装済み内容:
+
+- [backend/internal/infrastructure/playersearch/repository.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/playersearch/repository.go)
+  - `FindSavedPlayer(ctx, input)` を本実装に変更
+  - `GetRegionByName` -> `GetSavedPlayerKeyByRiotID` -> `GetSavedPlayerByPuuid` の順で保存済みプレイヤーを解決
+  - `ListPlayerCurrentRanksByPlayerID` / `ListRecentMatchHistoriesByPlayerID` / `ListMatchParticipantsByMatchHistoryID` を集約して `PlayerSearchResult` を構築
+- [backend/internal/infrastructure/playersearch/read_mapper.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/playersearch/read_mapper.go)
+  - DB row から `PlayerSearchResult` / rank / match / participant を組み立てる mapper を追加
+  - `RANKED_SOLO_5x5` / `RANKED_FLEX_SR` を `soloRank` / `flexRank` へ復元
+  - role 未保存時は `UNKNOWN` へ fallback
+  - DB read 時の recent matches は現行 Riot 取得件数に合わせて 3 件で復元
+- [backend/internal/infrastructure/riot/ddragon.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/riot/ddragon.go)
+  - `ProfileIconURL(ctx, profileIconID)` を追加
+  - Riot 直取得時と DB read 時で同じ profile icon URL builder を共有
+- [backend/cmd/api/main.go](/Users/ellery/dev/koshinankin/feed-gg/backend/cmd/api/main.go)
+  - repository に profile icon URL resolver として `riotClient` を注入
+- [backend/internal/infrastructure/playersearch/read_mapper_test.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/playersearch/read_mapper_test.go)
+  - DB row -> `PlayerSearchResult` 変換と profile icon URL fallback のテストを追加
 
 実装要件:
 

@@ -18,14 +18,20 @@ var (
 )
 
 type Repository struct {
-	db      *sql.DB
-	queries *db.Queries
+	db                  *sql.DB
+	queries             *db.Queries
+	profileIconResolver ProfileIconURLResolver
 }
 
-func NewRepository(sqlDB *sql.DB, queries *db.Queries) *Repository {
+func NewRepository(
+	sqlDB *sql.DB,
+	queries *db.Queries,
+	profileIconResolver ProfileIconURLResolver,
+) *Repository {
 	return &Repository{
-		db:      sqlDB,
-		queries: queries,
+		db:                  sqlDB,
+		queries:             queries,
+		profileIconResolver: profileIconResolver,
 	}
 }
 
@@ -33,7 +39,74 @@ func (r *Repository) FindSavedPlayer(
 	ctx context.Context,
 	input usecase.PlayerSearchInput,
 ) (*usecase.PlayerSearchResult, error) {
-	return nil, nil
+	if r.queries == nil {
+		return nil, ErrRepositoryNotConfigured
+	}
+
+	input = input.Normalize()
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
+	region, err := r.queries.GetRegionByName(ctx, input.Region)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("resolve region %q: %w", input.Region, err)
+	}
+
+	playerKey, err := r.queries.GetSavedPlayerKeyByRiotID(ctx, db.GetSavedPlayerKeyByRiotIDParams{
+		RegionID: region.ID,
+		GameName: nullString(input.GameName),
+		TagLine:  nullString(input.TagLine),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("lookup saved player key: %w", err)
+	}
+
+	playerRow, err := r.queries.GetSavedPlayerByPuuid(ctx, playerKey.Puuid)
+	if err != nil {
+		return nil, fmt.Errorf("load saved player %q: %w", playerKey.Puuid, err)
+	}
+
+	rankRows, err := r.queries.ListPlayerCurrentRanksByPlayerID(ctx, playerRow.PlayerID)
+	if err != nil {
+		return nil, fmt.Errorf("load player ranks for player_id=%d: %w", playerRow.PlayerID, err)
+	}
+
+	matchRows, err := r.queries.ListRecentMatchHistoriesByPlayerID(ctx, db.ListRecentMatchHistoriesByPlayerIDParams{
+		PlayerID:   playerRow.PlayerID,
+		LimitCount: savedPlayerRecentMatchLimit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("load recent matches for player_id=%d: %w", playerRow.PlayerID, err)
+	}
+
+	matchParticipants := make(map[int64][]db.ListMatchParticipantsByMatchHistoryIDRow, len(matchRows))
+	for _, matchRow := range matchRows {
+		participants, err := r.queries.ListMatchParticipantsByMatchHistoryID(ctx, matchRow.MatchHistoryID)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"load participants for match_history_id=%d: %w",
+				matchRow.MatchHistoryID,
+				err,
+			)
+		}
+		matchParticipants[matchRow.MatchHistoryID] = participants
+	}
+
+	return mapSavedPlayerSearchResult(
+		ctx,
+		r.profileIconResolver,
+		playerRow,
+		rankRows,
+		matchRows,
+		matchParticipants,
+	), nil
 }
 
 func (r *Repository) SaveFetchedPlayer(ctx context.Context, fetched *riot.PlayerProfile) (err error) {
