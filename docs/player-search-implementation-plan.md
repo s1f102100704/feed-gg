@@ -126,11 +126,25 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 ### Step 3: DB Save
 
-状態: 未着手
+状態: 完了
 
 目的:
 
 - `Riot API` から取得した 1 プレイヤー分を 1 transaction で保存できるようにする
+
+実装済み内容:
+
+- [backend/internal/infrastructure/playersearch/repository.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/playersearch/repository.go)
+  - `Repository` を追加し、`SaveFetchedPlayer(ctx, fetched)` を本実装に変更
+  - `sql.DB.BeginTx` + `Queries.WithTx(tx)` で保存フェーズを 1 transaction に統一
+  - `region` 解決 -> `player` upsert -> `player_current_rank` 入れ直し -> `match_history` upsert -> participant 用 `player` upsert -> `match_participant` upsert の順で保存
+  - `revisionDate` / `playedAt` を DB 向けの時刻型へ変換
+  - `player_current_rank.recorded_at` は現状の aggregate に Riot timestamp がないため save timestamp を使う
+  - rank がある queue だけ `player_current_rank` を入れ直すよう実装
+- [backend/cmd/api/main.go](/Users/ellery/dev/koshinankin/feed-gg/backend/cmd/api/main.go)
+  - no-op ではなく実 repository を usecase に配線
+- [backend/internal/infrastructure/playersearch/repository_test.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/playersearch/repository_test.go)
+  - 保存入口の guard と DTO -> DB param 変換 helper のテストを追加
 
 実装要件:
 
