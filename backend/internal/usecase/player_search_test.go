@@ -23,6 +23,10 @@ type fakeRegionChecker struct {
 	err    error
 }
 
+type fakePlayerSearchCache struct{}
+
+type fakePlayerSearchRepository struct{}
+
 func (f *fakePlayerSearcher) SearchPlayerByRiotID(
 	ctx context.Context,
 	platformRegion string,
@@ -39,11 +43,33 @@ func (f *fakeRegionChecker) RegionExists(ctx context.Context, name string) (bool
 	return f.exists, f.err
 }
 
+func (f *fakePlayerSearchCache) Get(key PlayerSearchKey) (*PlayerSearchResult, bool) {
+	return nil, false
+}
+
+func (f *fakePlayerSearchCache) Set(key PlayerSearchKey, value *PlayerSearchResult) {}
+
+func (f *fakePlayerSearchRepository) FindSavedPlayer(
+	ctx context.Context,
+	input PlayerSearchInput,
+) (*PlayerSearchResult, error) {
+	return nil, nil
+}
+
+func (f *fakePlayerSearchRepository) SaveFetchedPlayer(ctx context.Context, fetched *riot.PlayerProfile) error {
+	return nil
+}
+
 func TestPlayerSearchExecuteReturnsUnsupportedRegionWhenMissingInMaster(t *testing.T) {
 	t.Parallel()
 
 	searcher := &fakePlayerSearcher{}
-	usecase := NewPlayerSearch(searcher, &fakeRegionChecker{exists: false})
+	usecase := NewPlayerSearch(
+		&fakePlayerSearchCache{},
+		&fakePlayerSearchRepository{},
+		searcher,
+		&fakeRegionChecker{exists: false},
+	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
 		Region:   "XXX",
@@ -68,7 +94,12 @@ func TestPlayerSearchExecuteReturnsUnsupportedRegionWhenMissingInMaster(t *testi
 func TestPlayerSearchExecuteReturnsMasterLookupFailure(t *testing.T) {
 	t.Parallel()
 
-	usecase := NewPlayerSearch(&fakePlayerSearcher{}, &fakeRegionChecker{err: errors.New("db down")})
+	usecase := NewPlayerSearch(
+		&fakePlayerSearchCache{},
+		&fakePlayerSearchRepository{},
+		&fakePlayerSearcher{},
+		&fakeRegionChecker{err: errors.New("db down")},
+	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
 		Region:   "JP1",
@@ -120,7 +151,12 @@ func TestPlayerSearchExecuteReturnsMappedResult(t *testing.T) {
 		},
 		statusCode: http.StatusOK,
 	}
-	usecase := NewPlayerSearch(searcher, &fakeRegionChecker{exists: true})
+	usecase := NewPlayerSearch(
+		&fakePlayerSearchCache{},
+		&fakePlayerSearchRepository{},
+		searcher,
+		&fakeRegionChecker{exists: true},
+	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
 		Region:   "JP1",
@@ -162,10 +198,15 @@ func TestPlayerSearchExecuteReturnsMappedResult(t *testing.T) {
 func TestPlayerSearchExecuteMapsRiotInvalidRegion(t *testing.T) {
 	t.Parallel()
 
-	usecase := NewPlayerSearch(&fakePlayerSearcher{
-		statusCode: http.StatusBadRequest,
-		err:        riot.ErrInvalidRegion,
-	}, &fakeRegionChecker{exists: true})
+	usecase := NewPlayerSearch(
+		&fakePlayerSearchCache{},
+		&fakePlayerSearchRepository{},
+		&fakePlayerSearcher{
+			statusCode: http.StatusBadRequest,
+			err:        riot.ErrInvalidRegion,
+		},
+		&fakeRegionChecker{exists: true},
+	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
 		Region:   "JP1",

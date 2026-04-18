@@ -8,8 +8,10 @@ import (
 	"time"
 
 	httpadapter "feed-gg/backend/internal/adapter/http"
+	cacheinfra "feed-gg/backend/internal/infrastructure/cache"
 	dbgen "feed-gg/backend/internal/infrastructure/db/sqlc"
 	"feed-gg/backend/internal/infrastructure/masterdata"
+	playersearchinfra "feed-gg/backend/internal/infrastructure/playersearch"
 	"feed-gg/backend/internal/infrastructure/riot"
 	"feed-gg/backend/internal/usecase"
 
@@ -46,12 +48,19 @@ func main() {
 
 	queries := dbgen.New(sqlDB)
 	regionStore := masterdata.NewRegionStore(queries)
+	playerSearchCache := cacheinfra.NewNoopPlayerSearchCache()
+	playerSearchRepository := playersearchinfra.NewNoopRepository()
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
 		log.Fatal("RIOT_API_KEY is not set")
 	}
 	riotClient := riot.NewClient(riotAPIKey)
-	playerSearchUsecase := usecase.NewPlayerSearch(riotClient, regionStore)
+	playerSearchUsecase := usecase.NewPlayerSearch(
+		playerSearchCache,
+		playerSearchRepository,
+		riotClient,
+		regionStore,
+	)
 	playerSearchHandler := httpadapter.NewPlayerSearchHandler(playerSearchUsecase)
 	regionsHandler := httpadapter.NewRegionsHandler(regionStore)
 

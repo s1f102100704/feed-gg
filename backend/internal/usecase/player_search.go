@@ -14,11 +14,13 @@ var (
 )
 
 type PlayerSearch struct {
-	riotClient    PlayerSearcher
+	cache         PlayerSearchCache
+	repository    PlayerSearchRepository
+	riotGateway   RiotGateway
 	regionChecker RegionChecker
 }
 
-type PlayerSearcher interface {
+type RiotGateway interface {
 	SearchPlayerByRiotID(
 		ctx context.Context,
 		platformRegion string,
@@ -31,11 +33,23 @@ type RegionChecker interface {
 	RegionExists(ctx context.Context, name string) (bool, error)
 }
 
+type PlayerSearchCache interface {
+	Get(key PlayerSearchKey) (*PlayerSearchResult, bool)
+	Set(key PlayerSearchKey, value *PlayerSearchResult)
+}
+
+type PlayerSearchRepository interface {
+	FindSavedPlayer(ctx context.Context, input PlayerSearchInput) (*PlayerSearchResult, error)
+	SaveFetchedPlayer(ctx context.Context, fetched *riot.PlayerProfile) error
+}
+
 type PlayerSearchInput struct {
 	Region   string
 	GameName string
 	TagLine  string
 }
+
+type PlayerSearchKey string
 
 type PlayerSearchResult struct {
 	Region         string         `json:"region"`
@@ -93,9 +107,20 @@ type MatchSummary struct {
 	Participants     []MatchParticipant `json:"participants,omitempty"`
 }
 
-func NewPlayerSearch(riotClient PlayerSearcher, regionChecker RegionChecker) *PlayerSearch {
+func NewPlayerSearchKey(input PlayerSearchInput) PlayerSearchKey {
+	return PlayerSearchKey(input.Region + ":" + input.GameName + ":" + input.TagLine)
+}
+
+func NewPlayerSearch(
+	cache PlayerSearchCache,
+	repository PlayerSearchRepository,
+	riotGateway RiotGateway,
+	regionChecker RegionChecker,
+) *PlayerSearch {
 	return &PlayerSearch{
-		riotClient:    riotClient,
+		cache:         cache,
+		repository:    repository,
+		riotGateway:   riotGateway,
 		regionChecker: regionChecker,
 	}
 }
@@ -112,7 +137,7 @@ func (u *PlayerSearch) Execute(
 		return nil, http.StatusBadRequest, ErrUnsupportedRegion
 	}
 
-	player, statusCode, err := u.riotClient.SearchPlayerByRiotID(
+	player, statusCode, err := u.riotGateway.SearchPlayerByRiotID(
 		ctx,
 		input.Region,
 		input.GameName,
