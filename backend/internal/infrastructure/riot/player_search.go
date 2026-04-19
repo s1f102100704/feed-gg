@@ -46,13 +46,9 @@ func (c *Client) SearchPlayerByRiotID(
 	}
 
 	iconURL := ""
-	version, err := c.ddragonLatestVersion(ctx)
-	if err == nil && version != "" {
-		iconURL = fmt.Sprintf(
-			"https://ddragon.leagueoflegends.com/cdn/%s/img/profileicon/%d.png",
-			version,
-			summoner.ProfileIconID,
-		)
+	resolvedIconURL, err := c.ProfileIconURL(ctx, summoner.ProfileIconID)
+	if err == nil {
+		iconURL = resolvedIconURL
 	}
 
 	return &PlayerProfile{

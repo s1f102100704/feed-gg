@@ -4,21 +4,27 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"feed-gg/backend/internal/infrastructure/riot"
 )
 
 var (
-	ErrUnsupportedRegion       = errors.New("unsupported region")
-	ErrRegionMasterUnavailable = errors.New("failed to load region master")
+	ErrInvalidPlayerSearchInput = errors.New("region, gameName, and tagLine are required")
+	ErrUnsupportedRegion        = errors.New("unsupported region")
+	ErrRegionMasterUnavailable  = errors.New("failed to load region master")
+	ErrSavedPlayerLookupFailed  = errors.New("failed to load saved player")
+	ErrFetchedPlayerSaveFailed  = errors.New("failed to save fetched player")
 )
 
 type PlayerSearch struct {
-	riotClient    PlayerSearcher
+	cache         PlayerSearchCache
+	repository    PlayerSearchRepository
+	riotGateway   RiotGateway
 	regionChecker RegionChecker
 }
 
-type PlayerSearcher interface {
+type RiotGateway interface {
 	SearchPlayerByRiotID(
 		ctx context.Context,
 		platformRegion string,
@@ -31,11 +37,23 @@ type RegionChecker interface {
 	RegionExists(ctx context.Context, name string) (bool, error)
 }
 
+type PlayerSearchCache interface {
+	Get(key PlayerSearchKey) (*PlayerSearchResult, bool)
+	Set(key PlayerSearchKey, value *PlayerSearchResult)
+}
+
+type PlayerSearchRepository interface {
+	FindSavedPlayer(ctx context.Context, input PlayerSearchInput) (*PlayerSearchResult, error)
+	SaveFetchedPlayer(ctx context.Context, fetched *riot.PlayerProfile) error
+}
+
 type PlayerSearchInput struct {
 	Region   string
 	GameName string
 	TagLine  string
 }
+
+type PlayerSearchKey string
 
 type PlayerSearchResult struct {
 	Region         string         `json:"region"`
@@ -93,9 +111,36 @@ type MatchSummary struct {
 	Participants     []MatchParticipant `json:"participants,omitempty"`
 }
 
-func NewPlayerSearch(riotClient PlayerSearcher, regionChecker RegionChecker) *PlayerSearch {
+func NewPlayerSearchKey(input PlayerSearchInput) PlayerSearchKey {
+	input = input.Normalize()
+	return PlayerSearchKey(input.Region + ":" + input.GameName + ":" + input.TagLine)
+}
+
+func (i PlayerSearchInput) Normalize() PlayerSearchInput {
+	return PlayerSearchInput{
+		Region:   strings.ToUpper(strings.TrimSpace(i.Region)),
+		GameName: strings.TrimSpace(i.GameName),
+		TagLine:  strings.TrimSpace(i.TagLine),
+	}
+}
+
+func (i PlayerSearchInput) Validate() error {
+	if i.Region == "" || i.GameName == "" || i.TagLine == "" {
+		return ErrInvalidPlayerSearchInput
+	}
+	return nil
+}
+
+func NewPlayerSearch(
+	cache PlayerSearchCache,
+	repository PlayerSearchRepository,
+	riotGateway RiotGateway,
+	regionChecker RegionChecker,
+) *PlayerSearch {
 	return &PlayerSearch{
-		riotClient:    riotClient,
+		cache:         cache,
+		repository:    repository,
+		riotGateway:   riotGateway,
 		regionChecker: regionChecker,
 	}
 }
@@ -104,6 +149,11 @@ func (u *PlayerSearch) Execute(
 	ctx context.Context,
 	input PlayerSearchInput,
 ) (*PlayerSearchResult, int, error) {
+	input = input.Normalize()
+	if err := input.Validate(); err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
 	exists, err := u.regionChecker.RegionExists(ctx, input.Region)
 	if err != nil {
 		return nil, http.StatusInternalServerError, ErrRegionMasterUnavailable
@@ -112,7 +162,22 @@ func (u *PlayerSearch) Execute(
 		return nil, http.StatusBadRequest, ErrUnsupportedRegion
 	}
 
-	player, statusCode, err := u.riotClient.SearchPlayerByRiotID(
+	key := NewPlayerSearchKey(input)
+	cachedPlayer, found := u.cache.Get(key)
+	if found {
+		return cachedPlayer, http.StatusOK, nil
+	}
+
+	savedPlayer, err := u.repository.FindSavedPlayer(ctx, input)
+	if err != nil {
+		return nil, http.StatusInternalServerError, ErrSavedPlayerLookupFailed
+	}
+	if savedPlayer != nil {
+		u.cache.Set(key, savedPlayer)
+		return savedPlayer, http.StatusOK, nil
+	}
+
+	player, statusCode, err := u.riotGateway.SearchPlayerByRiotID(
 		ctx,
 		input.Region,
 		input.GameName,
@@ -125,7 +190,14 @@ func (u *PlayerSearch) Execute(
 		return nil, statusCode, err
 	}
 
-	return mapPlayerSearchResult(player), http.StatusOK, nil
+	if err := u.repository.SaveFetchedPlayer(ctx, player); err != nil {
+		return nil, http.StatusInternalServerError, ErrFetchedPlayerSaveFailed
+	}
+
+	result := mapPlayerSearchResult(player)
+	u.cache.Set(key, result)
+
+	return result, http.StatusOK, nil
 }
 
 func mapPlayerSearchResult(player *riot.PlayerProfile) *PlayerSearchResult {

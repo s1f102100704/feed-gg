@@ -8,8 +8,10 @@ import (
 	"time"
 
 	httpadapter "feed-gg/backend/internal/adapter/http"
+	cacheinfra "feed-gg/backend/internal/infrastructure/cache"
 	dbgen "feed-gg/backend/internal/infrastructure/db/sqlc"
 	"feed-gg/backend/internal/infrastructure/masterdata"
+	playersearchinfra "feed-gg/backend/internal/infrastructure/playersearch"
 	"feed-gg/backend/internal/infrastructure/riot"
 	"feed-gg/backend/internal/usecase"
 
@@ -46,12 +48,19 @@ func main() {
 
 	queries := dbgen.New(sqlDB)
 	regionStore := masterdata.NewRegionStore(queries)
+	playerSearchCache := cacheinfra.NewPlayerSearchCache()
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
 		log.Fatal("RIOT_API_KEY is not set")
 	}
 	riotClient := riot.NewClient(riotAPIKey)
-	playerSearchUsecase := usecase.NewPlayerSearch(riotClient, regionStore)
+	playerSearchRepository := playersearchinfra.NewRepository(sqlDB, queries, riotClient)
+	playerSearchUsecase := usecase.NewPlayerSearch(
+		playerSearchCache,
+		playerSearchRepository,
+		riotClient,
+		regionStore,
+	)
 	playerSearchHandler := httpadapter.NewPlayerSearchHandler(playerSearchUsecase)
 	regionsHandler := httpadapter.NewRegionsHandler(regionStore)
 
@@ -74,8 +83,8 @@ func main() {
 		}
 	})
 
-	r.Post("/api/players/search", playerSearchHandler.Search)
-	r.Options("/api/players/search", playerSearchHandler.Search)
+	r.Get("/api/players/{region}/{gameName}/{tagLine}", playerSearchHandler.Search)
+	r.Options("/api/players/{region}/{gameName}/{tagLine}", playerSearchHandler.Search)
 	r.Get("/api/regions", regionsHandler.List)
 	r.Options("/api/regions", regionsHandler.List)
 
@@ -94,7 +103,7 @@ func main() {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 		if r.Method == http.MethodOptions {

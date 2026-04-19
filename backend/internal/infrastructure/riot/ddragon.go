@@ -14,6 +14,27 @@ const (
 	ddragonVersionTTL  = 24 * time.Hour
 )
 
+func buildProfileIconURL(version string, profileIconID int) string {
+	if version == "" || profileIconID <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"https://ddragon.leagueoflegends.com/cdn/%s/img/profileicon/%d.png",
+		version,
+		profileIconID,
+	)
+}
+
+func (c *Client) ProfileIconURL(ctx context.Context, profileIconID int) (string, error) {
+	version, err := c.ddragonLatestVersion(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	return buildProfileIconURL(version, profileIconID), nil
+}
+
 func (c *Client) ddragonLatestVersion(ctx context.Context) (string, error) {
 	c.versionMu.RLock()
 	if c.ddragonVersion != "" && time.Since(c.ddragonFetchedAt) < ddragonVersionTTL {
