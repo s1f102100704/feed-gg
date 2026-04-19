@@ -13,6 +13,8 @@ var (
 	ErrInvalidPlayerSearchInput = errors.New("region, gameName, and tagLine are required")
 	ErrUnsupportedRegion        = errors.New("unsupported region")
 	ErrRegionMasterUnavailable  = errors.New("failed to load region master")
+	ErrSavedPlayerLookupFailed  = errors.New("failed to load saved player")
+	ErrFetchedPlayerSaveFailed  = errors.New("failed to save fetched player")
 )
 
 type PlayerSearch struct {
@@ -160,6 +162,14 @@ func (u *PlayerSearch) Execute(
 		return nil, http.StatusBadRequest, ErrUnsupportedRegion
 	}
 
+	savedPlayer, err := u.repository.FindSavedPlayer(ctx, input)
+	if err != nil {
+		return nil, http.StatusInternalServerError, ErrSavedPlayerLookupFailed
+	}
+	if savedPlayer != nil {
+		return savedPlayer, http.StatusOK, nil
+	}
+
 	player, statusCode, err := u.riotGateway.SearchPlayerByRiotID(
 		ctx,
 		input.Region,
@@ -171,6 +181,10 @@ func (u *PlayerSearch) Execute(
 			return nil, http.StatusBadRequest, ErrUnsupportedRegion
 		}
 		return nil, statusCode, err
+	}
+
+	if err := u.repository.SaveFetchedPlayer(ctx, player); err != nil {
+		return nil, http.StatusInternalServerError, ErrFetchedPlayerSaveFailed
 	}
 
 	return mapPlayerSearchResult(player), http.StatusOK, nil

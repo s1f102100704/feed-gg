@@ -224,11 +224,24 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 ### Step 5: Usecase Switch To DB-First
 
-状態: 未着手
+状態: 完了
 
 目的:
 
 - cache なしで `DB hit -> return / DB miss -> Riot -> DB save -> return` を成立させる
+
+実装済み内容:
+
+- [backend/internal/usecase/player_search.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search.go)
+  - `Execute` を `region` 確認後に `repository.FindSavedPlayer` を先に呼ぶ DB-first フローへ変更
+  - DB hit 時は Riot を叩かず、そのまま `PlayerSearchResult` を返すよう変更
+  - DB miss 時は Riot 取得後に `repository.SaveFetchedPlayer` を呼んでから返すよう変更
+  - repository の read/save 失敗は usecase 内で 500 系の generic error に丸めるよう追加
+- [backend/internal/usecase/player_search_test.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search_test.go)
+  - DB hit で Riot を呼ばないこと
+  - DB miss で Riot 取得後に save すること
+  - saved player lookup failure / fetched player save failure の扱い
+  をテスト追加
 
 実装要件:
 
