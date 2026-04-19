@@ -6,22 +6,21 @@ import (
 	"net/http"
 	"strings"
 
+	"feed-gg/backend/internal/domain/regions"
 	"feed-gg/backend/internal/infrastructure/riot"
 )
 
 var (
 	ErrInvalidPlayerSearchInput = errors.New("region, gameName, and tagLine are required")
 	ErrUnsupportedRegion        = errors.New("unsupported region")
-	ErrRegionMasterUnavailable  = errors.New("failed to load region master")
 	ErrSavedPlayerLookupFailed  = errors.New("failed to load saved player")
 	ErrFetchedPlayerSaveFailed  = errors.New("failed to save fetched player")
 )
 
 type PlayerSearch struct {
-	cache         PlayerSearchCache
-	repository    PlayerSearchRepository
-	riotGateway   RiotGateway
-	regionChecker RegionChecker
+	cache       PlayerSearchCache
+	repository  PlayerSearchRepository
+	riotGateway RiotGateway
 }
 
 type RiotGateway interface {
@@ -31,10 +30,6 @@ type RiotGateway interface {
 		gameName string,
 		tagLine string,
 	) (*riot.PlayerProfile, int, error)
-}
-
-type RegionChecker interface {
-	RegionExists(ctx context.Context, name string) (bool, error)
 }
 
 type PlayerSearchCache interface {
@@ -135,13 +130,11 @@ func NewPlayerSearch(
 	cache PlayerSearchCache,
 	repository PlayerSearchRepository,
 	riotGateway RiotGateway,
-	regionChecker RegionChecker,
 ) *PlayerSearch {
 	return &PlayerSearch{
-		cache:         cache,
-		repository:    repository,
-		riotGateway:   riotGateway,
-		regionChecker: regionChecker,
+		cache:       cache,
+		repository:  repository,
+		riotGateway: riotGateway,
 	}
 }
 
@@ -154,11 +147,7 @@ func (u *PlayerSearch) Execute(
 		return nil, http.StatusBadRequest, err
 	}
 
-	exists, err := u.regionChecker.RegionExists(ctx, input.Region)
-	if err != nil {
-		return nil, http.StatusInternalServerError, ErrRegionMasterUnavailable
-	}
-	if !exists {
+	if !regions.IsSupported(input.Region) {
 		return nil, http.StatusBadRequest, ErrUnsupportedRegion
 	}
 

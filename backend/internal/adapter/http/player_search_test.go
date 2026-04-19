@@ -71,16 +71,6 @@ func TestPlayerSearchHandler_Search(t *testing.T) {
 			wantBody:       "{\"error\":\"unsupported region\"}\n",
 		},
 		{
-			name: "returns server error when region master lookup fails",
-			path: "/api/players/JP1/hide%20on%20bush/KR1",
-			searchUsecase: &fakePlayerSearchUsecase{
-				statusCode: http.StatusInternalServerError,
-				err:        usecase.ErrRegionMasterUnavailable,
-			},
-			wantStatusCode: http.StatusInternalServerError,
-			wantBody:       "{\"error\":\"failed to load region master\"}\n",
-		},
-		{
 			name: "returns bad request when riot client rejects region",
 			path: "/api/players/JP1/hide%20on%20bush/KR1",
 			searchUsecase: &fakePlayerSearchUsecase{

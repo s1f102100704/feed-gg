@@ -1,24 +1,19 @@
 package httpadapter
 
 import (
-	"context"
 	"net/http"
+
+	"feed-gg/backend/internal/domain/regions"
 )
 
-type RegionsHandler struct {
-	regionStore RegionLister
-}
-
-type RegionLister interface {
-	ListRegionNames(ctx context.Context) ([]string, error)
-}
+type RegionsHandler struct{}
 
 type regionsResponse struct {
 	Regions []string `json:"regions"`
 }
 
-func NewRegionsHandler(regionStore RegionLister) *RegionsHandler {
-	return &RegionsHandler{regionStore: regionStore}
+func NewRegionsHandler() *RegionsHandler {
+	return &RegionsHandler{}
 }
 
 func (h *RegionsHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -27,11 +22,5 @@ func (h *RegionsHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	regions, err := h.regionStore.ListRegionNames(r.Context())
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "failed to load region master"})
-		return
-	}
-
-	writeJSON(w, http.StatusOK, regionsResponse{Regions: regions})
+	writeJSON(w, http.StatusOK, regionsResponse{Regions: regions.Names()})
 }

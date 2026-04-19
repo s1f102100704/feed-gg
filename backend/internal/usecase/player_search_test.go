@@ -18,12 +18,6 @@ type fakePlayerSearcher struct {
 	gotTagLine  string
 }
 
-type fakeRegionChecker struct {
-	exists  bool
-	err     error
-	gotName string
-}
-
 type fakePlayerSearchCache struct {
 	cachedValue *PlayerSearchResult
 	cachedHit   bool
@@ -50,11 +44,6 @@ func (f *fakePlayerSearcher) SearchPlayerByRiotID(
 	f.gotGameName = gameName
 	f.gotTagLine = tagLine
 	return f.player, f.statusCode, f.err
-}
-
-func (f *fakeRegionChecker) RegionExists(ctx context.Context, name string) (bool, error) {
-	f.gotName = name
-	return f.exists, f.err
 }
 
 func (f *fakePlayerSearchCache) Get(key PlayerSearchKey) (*PlayerSearchResult, bool) {
@@ -88,7 +77,6 @@ func TestPlayerSearchExecuteReturnsUnsupportedRegionWhenMissingInMaster(t *testi
 		&fakePlayerSearchCache{},
 		&fakePlayerSearchRepository{},
 		searcher,
-		&fakeRegionChecker{exists: false},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -111,33 +99,6 @@ func TestPlayerSearchExecuteReturnsUnsupportedRegionWhenMissingInMaster(t *testi
 	}
 }
 
-func TestPlayerSearchExecuteReturnsMasterLookupFailure(t *testing.T) {
-	t.Parallel()
-
-	usecase := NewPlayerSearch(
-		&fakePlayerSearchCache{},
-		&fakePlayerSearchRepository{},
-		&fakePlayerSearcher{},
-		&fakeRegionChecker{err: errors.New("db down")},
-	)
-
-	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
-		Region:   "JP1",
-		GameName: "hide on bush",
-		TagLine:  "KR1",
-	})
-
-	if result != nil {
-		t.Fatalf("result = %+v, want nil", result)
-	}
-	if statusCode != http.StatusInternalServerError {
-		t.Fatalf("statusCode = %d, want %d", statusCode, http.StatusInternalServerError)
-	}
-	if !errors.Is(err, ErrRegionMasterUnavailable) {
-		t.Fatalf("err = %v, want ErrRegionMasterUnavailable", err)
-	}
-}
-
 func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 	t.Parallel()
 
@@ -146,13 +107,11 @@ func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 		player:     &riot.PlayerProfile{Region: "JP1", GameName: "hide on bush", TagLine: "KR1"},
 		statusCode: http.StatusOK,
 	}
-	regionChecker := &fakeRegionChecker{exists: true}
 	repository := &fakePlayerSearchRepository{}
 	usecase := NewPlayerSearch(
 		cache,
 		repository,
 		searcher,
-		regionChecker,
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -169,9 +128,6 @@ func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 	}
 	if result == nil {
 		t.Fatal("result = nil, want non-nil")
-	}
-	if regionChecker.gotName != "JP1" {
-		t.Fatalf("region checker got %q, want JP1", regionChecker.gotName)
 	}
 	if repository.gotFindInput.Region != "JP1" ||
 		repository.gotFindInput.GameName != "hide on bush" ||
@@ -209,7 +165,6 @@ func TestPlayerSearchExecuteReturnsCachedPlayerOnCacheHit(t *testing.T) {
 		cache,
 		repository,
 		searcher,
-		&fakeRegionChecker{exists: true},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -239,12 +194,10 @@ func TestPlayerSearchExecuteReturnsInvalidInputAfterNormalization(t *testing.T) 
 	t.Parallel()
 
 	searcher := &fakePlayerSearcher{}
-	regionChecker := &fakeRegionChecker{exists: true}
 	usecase := NewPlayerSearch(
 		&fakePlayerSearchCache{},
 		&fakePlayerSearchRepository{},
 		searcher,
-		regionChecker,
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -261,9 +214,6 @@ func TestPlayerSearchExecuteReturnsInvalidInputAfterNormalization(t *testing.T) 
 	}
 	if !errors.Is(err, ErrInvalidPlayerSearchInput) {
 		t.Fatalf("err = %v, want ErrInvalidPlayerSearchInput", err)
-	}
-	if regionChecker.gotName != "" {
-		t.Fatalf("region checker got %q, want not called", regionChecker.gotName)
 	}
 	if searcher.gotRegion != "" {
 		t.Fatalf("riot client got region %q, want not called", searcher.gotRegion)
@@ -287,7 +237,6 @@ func TestPlayerSearchExecuteReturnsSavedPlayerOnDBHit(t *testing.T) {
 		cache,
 		repository,
 		searcher,
-		&fakeRegionChecker{exists: true},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -355,7 +304,6 @@ func TestPlayerSearchExecuteReturnsMappedResultAfterDBMiss(t *testing.T) {
 		cache,
 		repository,
 		searcher,
-		&fakeRegionChecker{exists: true},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -411,7 +359,6 @@ func TestPlayerSearchExecuteMapsRiotInvalidRegion(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 			err:        riot.ErrInvalidRegion,
 		},
-		&fakeRegionChecker{exists: true},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -438,7 +385,6 @@ func TestPlayerSearchExecuteReturnsRepositoryLookupFailure(t *testing.T) {
 		&fakePlayerSearchCache{},
 		&fakePlayerSearchRepository{findErr: errors.New("db down")},
 		&fakePlayerSearcher{},
-		&fakeRegionChecker{exists: true},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
@@ -470,7 +416,6 @@ func TestPlayerSearchExecuteReturnsSaveFailureAfterRiotFetch(t *testing.T) {
 		&fakePlayerSearchCache{},
 		repository,
 		searcher,
-		&fakeRegionChecker{exists: true},
 	)
 
 	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
