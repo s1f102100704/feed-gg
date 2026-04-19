@@ -1,17 +1,52 @@
 package cache
 
-import "feed-gg/backend/internal/usecase"
+import (
+	"time"
 
-type NoopPlayerSearchCache struct{}
+	"feed-gg/backend/internal/usecase"
 
-func NewNoopPlayerSearchCache() *NoopPlayerSearchCache {
-	return &NoopPlayerSearchCache{}
+	gocache "github.com/patrickmn/go-cache"
+)
+
+const (
+	defaultPlayerSearchCacheTTL     = 5 * time.Minute
+	defaultPlayerSearchCacheCleanup = 10 * time.Minute
+)
+
+type PlayerSearchCache struct {
+	cache *gocache.Cache
 }
 
-func (c *NoopPlayerSearchCache) Get(key usecase.PlayerSearchKey) (*usecase.PlayerSearchResult, bool) {
-	return nil, false
+func NewPlayerSearchCache() *PlayerSearchCache {
+	return &PlayerSearchCache{
+		cache: gocache.New(defaultPlayerSearchCacheTTL, defaultPlayerSearchCacheCleanup),
+	}
 }
 
-func (c *NoopPlayerSearchCache) Set(key usecase.PlayerSearchKey, value *usecase.PlayerSearchResult) {}
+func (c *PlayerSearchCache) Get(key usecase.PlayerSearchKey) (*usecase.PlayerSearchResult, bool) {
+	if c == nil || c.cache == nil {
+		return nil, false
+	}
 
-var _ usecase.PlayerSearchCache = (*NoopPlayerSearchCache)(nil)
+	cached, found := c.cache.Get(string(key))
+	if !found {
+		return nil, false
+	}
+
+	result, ok := cached.(*usecase.PlayerSearchResult)
+	if !ok {
+		return nil, false
+	}
+
+	return result, true
+}
+
+func (c *PlayerSearchCache) Set(key usecase.PlayerSearchKey, value *usecase.PlayerSearchResult) {
+	if c == nil || c.cache == nil || value == nil {
+		return
+	}
+
+	c.cache.Set(string(key), value, gocache.DefaultExpiration)
+}
+
+var _ usecase.PlayerSearchCache = (*PlayerSearchCache)(nil)

@@ -162,11 +162,18 @@ func (u *PlayerSearch) Execute(
 		return nil, http.StatusBadRequest, ErrUnsupportedRegion
 	}
 
+	key := NewPlayerSearchKey(input)
+	cachedPlayer, found := u.cache.Get(key)
+	if found {
+		return cachedPlayer, http.StatusOK, nil
+	}
+
 	savedPlayer, err := u.repository.FindSavedPlayer(ctx, input)
 	if err != nil {
 		return nil, http.StatusInternalServerError, ErrSavedPlayerLookupFailed
 	}
 	if savedPlayer != nil {
+		u.cache.Set(key, savedPlayer)
 		return savedPlayer, http.StatusOK, nil
 	}
 
@@ -187,7 +194,10 @@ func (u *PlayerSearch) Execute(
 		return nil, http.StatusInternalServerError, ErrFetchedPlayerSaveFailed
 	}
 
-	return mapPlayerSearchResult(player), http.StatusOK, nil
+	result := mapPlayerSearchResult(player)
+	u.cache.Set(key, result)
+
+	return result, http.StatusOK, nil
 }
 
 func mapPlayerSearchResult(player *riot.PlayerProfile) *PlayerSearchResult {

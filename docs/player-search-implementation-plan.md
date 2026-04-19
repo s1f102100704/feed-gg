@@ -261,11 +261,29 @@ usecase の返り値は当面 `PlayerSearchResult` を正規形として扱う�
 
 ### Step 6: Cache-Aside
 
-状態: 未着手
+状態: 完了
 
 目的:
 
 - 検索結果 aggregate をメモリキャッシュに載せる
+
+実装済み内容:
+
+- [backend/internal/infrastructure/cache/player_search.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/infrastructure/cache/player_search.go)
+  - `github.com/patrickmn/go-cache` を使った `PlayerSearchCache` の本実装を追加
+  - `PlayerSearchKey` を key に `PlayerSearchResult` 全体を positive cache するよう実装
+  - TTL は 5 分、cleanup interval は 10 分で設定
+- [backend/cmd/api/main.go](/Users/ellery/dev/koshinankin/feed-gg/backend/cmd/api/main.go)
+  - no-op cache ではなく real cache を usecase に配線
+- [backend/internal/usecase/player_search.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search.go)
+  - `Execute` を `cache -> DB -> Riot` の cache-aside フローへ変更
+  - cache hit なら即 return
+  - DB hit 時は `cache.Set`
+  - Riot miss 解決後も `cache.Set`
+- [backend/internal/usecase/player_search_test.go](/Users/ellery/dev/koshinankin/feed-gg/backend/internal/usecase/player_search_test.go)
+  - cache hit で DB/Riot を呼ばないこと
+  - DB hit / Riot hit の両方で cache に載ること
+  をテスト追加
 
 実装要件:
 

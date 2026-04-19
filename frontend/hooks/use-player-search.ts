@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { API_BASE_URL } from "@/lib/player-search-api";
+import { buildPlayerSearchApiPath } from "@/lib/player-search-path";
 import { ApiError, Region, SearchResult } from "@/types/player-search";
 
 export function usePlayerSearch() {
@@ -14,17 +15,9 @@ export function usePlayerSearch() {
       setError("");
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/players/search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            region,
-            gameName,
-            tagLine,
-          }),
-        });
+        const response = await fetch(
+          `${API_BASE_URL}${buildPlayerSearchApiPath(region, gameName, tagLine)}`,
+        );
 
         const payload = (await response.json()) as SearchResult | ApiError;
 

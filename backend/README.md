@@ -40,7 +40,7 @@ http.Request や SQL の生クエリみたいな外側の詳細は持ち込ま�
 /adapter
 外側との入出力を usecase 用に変換する層
 例: HTTP handler、request/response DTO、DB repository のインターフェース定義
-POST /api/players/search の JSON を usecase input に変換するのはここ
+GET /api/players/{region}/{gameName}/{tagLine} の path param を usecase input に変換するのはここ
 
 
 /infrastructure

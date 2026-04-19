@@ -24,7 +24,13 @@ type fakeRegionChecker struct {
 	gotName string
 }
 
-type fakePlayerSearchCache struct{}
+type fakePlayerSearchCache struct {
+	cachedValue *PlayerSearchResult
+	cachedHit   bool
+	gotKey      PlayerSearchKey
+	setKey      PlayerSearchKey
+	setValue    *PlayerSearchResult
+}
 
 type fakePlayerSearchRepository struct {
 	savedPlayer    *PlayerSearchResult
@@ -52,10 +58,14 @@ func (f *fakeRegionChecker) RegionExists(ctx context.Context, name string) (bool
 }
 
 func (f *fakePlayerSearchCache) Get(key PlayerSearchKey) (*PlayerSearchResult, bool) {
-	return nil, false
+	f.gotKey = key
+	return f.cachedValue, f.cachedHit
 }
 
-func (f *fakePlayerSearchCache) Set(key PlayerSearchKey, value *PlayerSearchResult) {}
+func (f *fakePlayerSearchCache) Set(key PlayerSearchKey, value *PlayerSearchResult) {
+	f.setKey = key
+	f.setValue = value
+}
 
 func (f *fakePlayerSearchRepository) FindSavedPlayer(
 	ctx context.Context,
@@ -131,6 +141,7 @@ func TestPlayerSearchExecuteReturnsMasterLookupFailure(t *testing.T) {
 func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 	t.Parallel()
 
+	cache := &fakePlayerSearchCache{}
 	searcher := &fakePlayerSearcher{
 		player:     &riot.PlayerProfile{Region: "JP1", GameName: "hide on bush", TagLine: "KR1"},
 		statusCode: http.StatusOK,
@@ -138,7 +149,7 @@ func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 	regionChecker := &fakeRegionChecker{exists: true}
 	repository := &fakePlayerSearchRepository{}
 	usecase := NewPlayerSearch(
-		&fakePlayerSearchCache{},
+		cache,
 		repository,
 		searcher,
 		regionChecker,
@@ -167,6 +178,9 @@ func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 		repository.gotFindInput.TagLine != "KR1" {
 		t.Fatalf("repository got %+v, want normalized input", repository.gotFindInput)
 	}
+	if cache.gotKey != PlayerSearchKey("JP1:hide on bush:KR1") {
+		t.Fatalf("cache got key %q, want normalized key", cache.gotKey)
+	}
 	if searcher.gotRegion != "JP1" || searcher.gotGameName != "hide on bush" || searcher.gotTagLine != "KR1" {
 		t.Fatalf(
 			"riot client called with %q %q %q, want JP1 hide on bush KR1",
@@ -174,6 +188,50 @@ func TestPlayerSearchExecuteNormalizesInputBeforeLookup(t *testing.T) {
 			searcher.gotGameName,
 			searcher.gotTagLine,
 		)
+	}
+}
+
+func TestPlayerSearchExecuteReturnsCachedPlayerOnCacheHit(t *testing.T) {
+	t.Parallel()
+
+	cache := &fakePlayerSearchCache{
+		cachedHit: true,
+		cachedValue: &PlayerSearchResult{
+			Region:   "JP1",
+			PUUID:    "cached-puuid",
+			GameName: "hide on bush",
+			TagLine:  "KR1",
+		},
+	}
+	repository := &fakePlayerSearchRepository{}
+	searcher := &fakePlayerSearcher{}
+	usecase := NewPlayerSearch(
+		cache,
+		repository,
+		searcher,
+		&fakeRegionChecker{exists: true},
+	)
+
+	result, statusCode, err := usecase.Execute(context.Background(), PlayerSearchInput{
+		Region:   "JP1",
+		GameName: "hide on bush",
+		TagLine:  "KR1",
+	})
+
+	if err != nil {
+		t.Fatalf("err = %v, want nil", err)
+	}
+	if statusCode != http.StatusOK {
+		t.Fatalf("statusCode = %d, want %d", statusCode, http.StatusOK)
+	}
+	if result == nil || result.PUUID != "cached-puuid" {
+		t.Fatalf("result = %+v, want cached player", result)
+	}
+	if repository.gotFindInput != (PlayerSearchInput{}) {
+		t.Fatalf("repository got %+v, want not called", repository.gotFindInput)
+	}
+	if searcher.gotRegion != "" {
+		t.Fatalf("riot client called with region %q, want not called", searcher.gotRegion)
 	}
 }
 
@@ -215,6 +273,7 @@ func TestPlayerSearchExecuteReturnsInvalidInputAfterNormalization(t *testing.T) 
 func TestPlayerSearchExecuteReturnsSavedPlayerOnDBHit(t *testing.T) {
 	t.Parallel()
 
+	cache := &fakePlayerSearchCache{}
 	repository := &fakePlayerSearchRepository{
 		savedPlayer: &PlayerSearchResult{
 			Region:   "JP1",
@@ -225,7 +284,7 @@ func TestPlayerSearchExecuteReturnsSavedPlayerOnDBHit(t *testing.T) {
 	}
 	searcher := &fakePlayerSearcher{}
 	usecase := NewPlayerSearch(
-		&fakePlayerSearchCache{},
+		cache,
 		repository,
 		searcher,
 		&fakeRegionChecker{exists: true},
@@ -252,11 +311,15 @@ func TestPlayerSearchExecuteReturnsSavedPlayerOnDBHit(t *testing.T) {
 	if repository.gotSaveFetched != nil {
 		t.Fatalf("repository saved %+v, want not called", repository.gotSaveFetched)
 	}
+	if cache.setValue != repository.savedPlayer {
+		t.Fatalf("cache set value %+v, want saved player %+v", cache.setValue, repository.savedPlayer)
+	}
 }
 
 func TestPlayerSearchExecuteReturnsMappedResultAfterDBMiss(t *testing.T) {
 	t.Parallel()
 
+	cache := &fakePlayerSearchCache{}
 	searcher := &fakePlayerSearcher{
 		player: &riot.PlayerProfile{
 			Region:         "JP1",
@@ -289,7 +352,7 @@ func TestPlayerSearchExecuteReturnsMappedResultAfterDBMiss(t *testing.T) {
 	}
 	repository := &fakePlayerSearchRepository{}
 	usecase := NewPlayerSearch(
-		&fakePlayerSearchCache{},
+		cache,
 		repository,
 		searcher,
 		&fakeRegionChecker{exists: true},
@@ -332,6 +395,9 @@ func TestPlayerSearchExecuteReturnsMappedResultAfterDBMiss(t *testing.T) {
 	}
 	if repository.gotSaveFetched != searcher.player {
 		t.Fatalf("repository saved %+v, want riot player %+v", repository.gotSaveFetched, searcher.player)
+	}
+	if cache.setValue == nil || cache.setValue.PUUID != "test-puuid" {
+		t.Fatalf("cache set value %+v, want mapped riot result", cache.setValue)
 	}
 }
 

@@ -60,3 +60,13 @@ export function buildSummonerPath(region: Region, riotId: string) {
     parsed.gameName,
   )}/${encodeURIComponent(parsed.tagLine)}`;
 }
+
+export function buildPlayerSearchApiPath(
+  region: Region,
+  gameName: string,
+  tagLine: string,
+) {
+  return `/api/players/${encodeURIComponent(region)}/${encodeURIComponent(
+    gameName,
+  )}/${encodeURIComponent(tagLine)}`;
+}

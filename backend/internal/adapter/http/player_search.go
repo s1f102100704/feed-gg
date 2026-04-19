@@ -7,6 +7,8 @@ import (
 	"net/http"
 
 	"feed-gg/backend/internal/usecase"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type PlayerSearchHandler struct {
@@ -20,17 +22,9 @@ type PlayerSearchUsecase interface {
 	) (*usecase.PlayerSearchResult, int, error)
 }
 
-type playerSearchRequest struct {
-	Region   string `json:"region"`
-	GameName string `json:"gameName"`
-	TagLine  string `json:"tagLine"`
-}
-
 type errorResponse struct {
 	Error string `json:"error"`
 }
-
-const playerSearchRequestBodyLimit = 1 << 10
 
 func NewPlayerSearchHandler(usecase PlayerSearchUsecase) *PlayerSearchHandler {
 	return &PlayerSearchHandler{
@@ -44,17 +38,10 @@ func (h *PlayerSearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req playerSearchRequest
-	r.Body = http.MaxBytesReader(w, r.Body, playerSearchRequestBodyLimit)
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
-		return
-	}
-
 	player, statusCode, err := h.usecase.Execute(r.Context(), usecase.PlayerSearchInput{
-		Region:   req.Region,
-		GameName: req.GameName,
-		TagLine:  req.TagLine,
+		Region:   chi.URLParam(r, "region"),
+		GameName: chi.URLParam(r, "gameName"),
+		TagLine:  chi.URLParam(r, "tagLine"),
 	})
 	if err != nil {
 		writeJSON(w, statusCode, errorResponse{Error: err.Error()})
