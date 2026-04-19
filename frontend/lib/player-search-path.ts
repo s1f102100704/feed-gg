@@ -1,28 +1,4 @@
-import { Region } from "@/types/player-search";
-
-const regionPathSegmentMap: Record<Region, string> = {
-  BR1: "br",
-  EUN1: "eune",
-  EUW1: "euw",
-  JP1: "jp",
-  KR: "kr",
-  LA1: "lan",
-  LA2: "las",
-  ME1: "me",
-  NA1: "na",
-  OC1: "oce",
-  PH2: "ph",
-  RU: "ru",
-  SG2: "sg",
-  TH2: "th",
-  TR1: "tr",
-  TW2: "tw",
-  VN2: "vn",
-};
-
-const pathSegmentRegionMap = Object.fromEntries(
-  Object.entries(regionPathSegmentMap).map(([region, segment]) => [segment, region]),
-) as Record<string, Region>;
+import { PATH_SEGMENT_REGIONS, REGION_PATH_SEGMENTS, Region } from "@/lib/regions";
 
 export function parseRiotID(value: string) {
   const trimmed = value.trim();
@@ -43,11 +19,11 @@ export function parseRiotID(value: string) {
 }
 
 export function regionToPathSegment(region: Region) {
-  return regionPathSegmentMap[region];
+  return REGION_PATH_SEGMENTS[region];
 }
 
 export function pathSegmentToRegion(segment: string): Region | null {
-  return pathSegmentRegionMap[segment.toLowerCase()] ?? null;
+  return PATH_SEGMENT_REGIONS[segment.toLowerCase()] ?? null;
 }
 
 export function buildSummonerPath(region: Region, riotId: string) {

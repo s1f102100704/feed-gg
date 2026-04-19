@@ -1,8 +1,6 @@
 import { HomeScreen } from "@/features/home/home-screen";
-import { fetchRegions } from "@/lib/server-regions";
+import { SUPPORTED_REGIONS } from "@/lib/regions";
 
-export default async function Home() {
-  const regions = await fetchRegions();
-
-  return <HomeScreen initialRegions={regions} />;
+export default function Home() {
+  return <HomeScreen initialRegions={SUPPORTED_REGIONS} />;
 }

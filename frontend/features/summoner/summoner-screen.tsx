@@ -11,11 +11,11 @@ import { SearchLoadingState } from "@/components/search/search-loading-state";
 import { SummonerHero } from "@/components/search/summoner-hero";
 import { SummonerContentLayout } from "@/components/summoner/summoner-content-layout";
 import { usePlayerSearch } from "@/hooks/use-player-search";
+import { DEFAULT_REGION, Region } from "@/lib/regions";
 import { buildSummonerPath } from "@/lib/player-search-path";
-import { Region } from "@/types/player-search";
 
 type SummonerScreenProps = {
-  initialRegions: Region[];
+  initialRegions: readonly Region[];
   resolvedRegion: Region | null;
   decodedGameName: string;
   decodedTagLine: string;
@@ -30,7 +30,7 @@ export function SummonerScreen({
   initialRiotId,
 }: SummonerScreenProps) {
   const router = useRouter();
-  const [region, setRegion] = useState<Region>(resolvedRegion ?? "JP1");
+  const [region, setRegion] = useState<Region>(resolvedRegion ?? DEFAULT_REGION);
   const [riotId, setRiotId] = useState(initialRiotId);
   const { result, error, isLoading, searchPlayer, clearResult } = usePlayerSearch();
   const availableRegions = initialRegions.length > 0 ? initialRegions : [region];

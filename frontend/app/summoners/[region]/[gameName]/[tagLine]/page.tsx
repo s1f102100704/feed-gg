@@ -1,6 +1,6 @@
 import { SummonerScreen } from "@/features/summoner/summoner-screen";
 import { pathSegmentToRegion } from "@/lib/player-search-path";
-import { fetchRegions } from "@/lib/server-regions";
+import { SUPPORTED_REGIONS } from "@/lib/regions";
 
 type SummonerPageProps = {
   params: Promise<{
@@ -16,12 +16,11 @@ export default async function SummonerPage({ params }: SummonerPageProps) {
   const decodedGameName = decodeURIComponent(gameName);
   const decodedTagLine = decodeURIComponent(tagLine);
   const initialRiotId = `${decodedGameName}#${decodedTagLine}`;
-  const regions = await fetchRegions();
 
   return (
     <SummonerScreen
       key={`${region}/${gameName}/${tagLine}`}
-      initialRegions={regions}
+      initialRegions={SUPPORTED_REGIONS}
       resolvedRegion={resolvedRegion}
       decodedGameName={decodedGameName}
       decodedTagLine={decodedTagLine}

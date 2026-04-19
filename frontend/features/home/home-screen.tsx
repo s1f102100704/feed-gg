@@ -6,16 +6,16 @@ import { useRouter } from "next/navigation";
 import { FeedTitle } from "@/components/search/feed-title";
 import { SearchErrorMessage } from "@/components/search/search-error-message";
 import { SearchForm } from "@/components/search/search-form";
+import { DEFAULT_REGION, Region } from "@/lib/regions";
 import { buildSummonerPath } from "@/lib/player-search-path";
-import { Region } from "@/types/player-search";
 
 type HomeScreenProps = {
-  initialRegions: Region[];
+  initialRegions: readonly Region[];
 };
 
 export function HomeScreen({ initialRegions }: HomeScreenProps) {
   const router = useRouter();
-  const [region, setRegion] = useState<Region>("JP1");
+  const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [riotId, setRiotId] = useState("");
   const [error, setError] = useState("");
   const availableRegions = initialRegions.length > 0 ? initialRegions : [region];

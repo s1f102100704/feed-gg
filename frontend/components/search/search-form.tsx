@@ -1,7 +1,7 @@
 import { Region } from "@/types/player-search";
 
 type SearchFormProps = {
-  regions: Region[];
+  regions: readonly Region[];
   region: Region;
   riotId: string;
   isLoading: boolean;
