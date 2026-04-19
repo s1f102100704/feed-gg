@@ -23,6 +23,8 @@ services:
       - ./frontend:/app
     ports:
       - 3000:3000 
+    env_file:
+      - ./frontend/.env.local
   db:
     image: "postgres:16"
     container_name: feed_gg_db

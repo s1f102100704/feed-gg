@@ -6,17 +6,19 @@ import { useRouter } from "next/navigation";
 import { FeedTitle } from "@/components/search/feed-title";
 import { SearchErrorMessage } from "@/components/search/search-error-message";
 import { SearchForm } from "@/components/search/search-form";
-import { useRegions } from "@/hooks/use-regions";
 import { buildSummonerPath } from "@/lib/player-search-path";
 import { Region } from "@/types/player-search";
 
-export function HomeScreen() {
+type HomeScreenProps = {
+  initialRegions: Region[];
+};
+
+export function HomeScreen({ initialRegions }: HomeScreenProps) {
   const router = useRouter();
   const [region, setRegion] = useState<Region>("JP1");
   const [riotId, setRiotId] = useState("");
   const [error, setError] = useState("");
-  const { regions, error: regionsError } = useRegions();
-  const availableRegions = regions.length > 0 ? regions : [region];
+  const availableRegions = initialRegions.length > 0 ? initialRegions : [region];
   const selectedRegion = availableRegions.includes(region) ? region : availableRegions[0];
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -47,9 +49,7 @@ export function HomeScreen() {
             onSubmit={handleSubmit}
           />
 
-          {error || regionsError ? (
-            <SearchErrorMessage message={error || regionsError} centered />
-          ) : null}
+          {error ? <SearchErrorMessage message={error} centered /> : null}
         </div>
       </div>
     </main>
