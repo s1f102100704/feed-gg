@@ -3,36 +3,17 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import { SearchResult } from "@/types/player-search";
+import { Label, SearchResult } from "@/types/player-search";
 
 type SummonerHeroProps = {
+  labels: Label[];
   result: SearchResult;
 };
 
-const provisionalLabels = [
-  { name: "レーン残りがち", votes: 18 },
-  { name: "ファーム優先", votes: 12 },
-  { name: "波がある", votes: 7 },
-];
-
-const provisionalLabelOptions = [
-  "レーン残りがち",
-  "ローム控えめ",
-  "サイド維持寄り",
-  "レーン優先",
-  "合流遅め",
-  "ファーム優先",
-  "波がある",
-  "無理に仕掛けがち",
-  "前に出すぎる",
-  "単独行動が多い",
-  "ファイト優先",
-  "終盤に失速しがち",
-];
-
-export function SummonerHero({ result }: SummonerHeroProps) {
+export function SummonerHero({ result, labels }: SummonerHeroProps) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [selectedLabel, setSelectedLabel] = useState<Label | null>(null);
+  const previewLabels = labels.slice(0, 3);
 
   return (
     <section
@@ -67,17 +48,14 @@ export function SummonerHero({ result }: SummonerHeroProps) {
 
             <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                {provisionalLabels.map((label) => (
+                {previewLabels.map((label) => (
                   <button
-                    key={label.name}
+                    key={label.id}
                     type="button"
                     onClick={() => setIsComposerOpen(true)}
                     className="inline-flex items-center gap-2 rounded-full border border-[#5b3236] bg-[#201317] px-3 py-1.5 text-xs text-[#f5e8de] transition hover:border-[#7b474c] hover:bg-[#2a171c]"
                   >
                     <span>{label.name}</span>
-                    <span className="rounded-full bg-[#3a2328] px-2 py-0.5 text-[11px] text-[#f0b26f]">
-                      {label.votes}
-                    </span>
                   </button>
                 ))}
               </div>
@@ -113,21 +91,21 @@ export function SummonerHero({ result }: SummonerHeroProps) {
           <div className="fade-up-soft border-t border-cyan-300/15 pt-6">
             <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.07] p-5">
               <div className="flex flex-wrap gap-3">
-                {provisionalLabelOptions.map((option) => {
-                  const isSelected = selectedLabel === option;
+                {labels.map((label) => {
+                  const isSelected = selectedLabel?.id === label.id;
 
                   return (
                     <button
-                      key={option}
+                      key={label.id}
                       type="button"
-                      onClick={() => setSelectedLabel(option)}
+                      onClick={() => setSelectedLabel(label)}
                       className={`rounded-full px-4 py-2.5 text-sm font-medium transition ${
                         isSelected
                           ? "border border-[#f3c98b] bg-[#f0b26f] text-[#24150d] shadow-lg shadow-[#f0b26f]/20"
                           : "border border-[#5b3236] bg-[#201317] text-[#f0ddd1] hover:border-[#7b474c] hover:bg-[#2a171c] hover:text-white"
                       }`}
                     >
-                      {option}
+                      {label.name}
                     </button>
                   );
                 })}
@@ -137,7 +115,7 @@ export function SummonerHero({ result }: SummonerHeroProps) {
                 <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-cyan-300/15 pt-4">
                   <span className="text-sm text-slate-300">選択中</span>
                   <span className="rounded-full bg-[#f0b26f] px-3 py-1 text-sm font-semibold text-[#24150d]">
-                    {selectedLabel}
+                    {selectedLabel.name}
                   </span>
                 </div>
               ) : null}

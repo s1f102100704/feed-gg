@@ -16,6 +16,11 @@ export type SearchResult = {
   matches: MatchSummary[];
 };
 
+export type Label = {
+  id: number;
+  name: string;
+};
+
 export type RankedQueue = {
   tier: string;
   rank: string;

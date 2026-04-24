@@ -10,6 +10,7 @@ import { SearchForm } from "@/components/search/search-form";
 import { SearchLoadingState } from "@/components/search/search-loading-state";
 import { SummonerHero } from "@/components/search/summoner-hero";
 import { SummonerContentLayout } from "@/components/summoner/summoner-content-layout";
+import { useLabels } from "@/hooks/use-labels";
 import { usePlayerSearch } from "@/hooks/use-player-search";
 import { DEFAULT_REGION, Region } from "@/lib/regions";
 import { buildSummonerPath } from "@/lib/player-search-path";
@@ -33,8 +34,13 @@ export function SummonerScreen({
   const [region, setRegion] = useState<Region>(resolvedRegion ?? DEFAULT_REGION);
   const [riotId, setRiotId] = useState(initialRiotId);
   const { result, error, isLoading, searchPlayer, clearResult } = usePlayerSearch();
+  const { labels, fetchLabels } = useLabels();
   const availableRegions = initialRegions.length > 0 ? initialRegions : [region];
   const selectedRegion = availableRegions.includes(region) ? region : availableRegions[0];
+
+  useEffect(() => {
+    void fetchLabels();
+  }, [fetchLabels]);
 
   useEffect(() => {
     if (!resolvedRegion) {
@@ -87,7 +93,7 @@ export function SummonerScreen({
 
         {result ? (
           <div className="space-y-6">
-            <SummonerHero result={result} />
+            <SummonerHero result={result} labels={labels} />
             <SummonerContentLayout
               left={<RankPanel result={result} />}
               right={<MatchHistoryPanel result={result} />}
