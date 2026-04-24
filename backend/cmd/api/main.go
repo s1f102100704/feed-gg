@@ -10,6 +10,7 @@ import (
 	httpadapter "feed-gg/backend/internal/adapter/http"
 	cacheinfra "feed-gg/backend/internal/infrastructure/cache"
 	dbgen "feed-gg/backend/internal/infrastructure/db/sqlc"
+	labelsinfra "feed-gg/backend/internal/infrastructure/labels"
 	playersearchinfra "feed-gg/backend/internal/infrastructure/playersearch"
 	"feed-gg/backend/internal/infrastructure/riot"
 	"feed-gg/backend/internal/usecase"
@@ -46,6 +47,10 @@ func main() {
 	}
 
 	queries := dbgen.New(sqlDB)
+	labelsCache := cacheinfra.NewLabelsCache()
+	labelsRepository := labelsinfra.NewRepository(queries)
+	labelsUsecase := usecase.NewLabels(labelsCache, labelsRepository)
+	labelsHandler := httpadapter.NewLabelsHandler(labelsUsecase)
 	playerSearchCache := cacheinfra.NewPlayerSearchCache()
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
@@ -82,6 +87,8 @@ func main() {
 
 	r.Get("/api/players/{region}/{gameName}/{tagLine}", playerSearchHandler.Search)
 	r.Options("/api/players/{region}/{gameName}/{tagLine}", playerSearchHandler.Search)
+	r.Get("/api/labels", labelsHandler.List)
+	r.Options("/api/labels", labelsHandler.List)
 	r.Get("/api/regions", regionsHandler.List)
 	r.Options("/api/regions", regionsHandler.List)
 
