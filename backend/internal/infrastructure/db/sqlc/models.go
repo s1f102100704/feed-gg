@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+type Label struct {
+	ID        int16     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type MatchHistory struct {
 	ID              int64     `json:"id"`
 	MatchID         string    `json:"match_id"`
@@ -67,6 +74,15 @@ type PlayerCurrentRank struct {
 	UpdatedAt     time.Time     `json:"updated_at"`
 }
 
+type PlayerLabelVote struct {
+	ID        int64     `json:"id"`
+	PlayerID  int64     `json:"player_id"`
+	LabelID   int16     `json:"label_id"`
+	VoterKey  string    `json:"voter_key"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type PlayerRank struct {
 	ID        int16     `json:"id"`
 	Tier      string    `json:"tier"`
@@ -87,12 +103,6 @@ type PlayerRankHistory struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-type PlayerTag struct {
-	PlayerID  int64     `json:"player_id"`
-	TagID     int16     `json:"tag_id"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 type Region struct {
 	ID        int16     `json:"id"`
 	Name      string    `json:"name"`
@@ -105,13 +115,6 @@ type Season struct {
 	Name      string    `json:"name"`
 	StartDate time.Time `json:"start_date"`
 	EndDate   time.Time `json:"end_date"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type Tag struct {
-	ID        int16     `json:"id"`
-	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
