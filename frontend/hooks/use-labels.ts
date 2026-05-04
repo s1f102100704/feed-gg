@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 
 import { API_BASE_URL } from "@/lib/player-search-api";
-import { ApiError, Label } from "@/types/player-search";
+import { Label } from "@/types/player-labels";
+import { ApiError } from "@/types/player-search";
 
 type LabelsResponse = {
   labels: Label[];

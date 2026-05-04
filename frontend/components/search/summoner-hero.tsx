@@ -1,57 +1,54 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { usePlayerLabels } from "@/hooks/use-player-labels";
-import { Label, SearchResult } from "@/types/player-search";
+import { Label, PlayerLabelSummary } from "@/types/player-labels";
+import { SearchResult } from "@/types/player-search";
 
 type SummonerHeroProps = {
-  labels: Label[];
+  availableLabels: Label[];
+  labelError: string;
+  playerLabels: PlayerLabelSummary[];
   result: SearchResult;
+  totalLabelVotes: number;
+  isLoadingPlayerLabels: boolean;
+  isSavingPlayerLabel: boolean;
+  onVotePlayerLabel: (label: Label) => Promise<boolean>;
 };
 
-export function SummonerHero({ result, labels }: SummonerHeroProps) {
+export function SummonerHero({
+  availableLabels,
+  labelError,
+  playerLabels,
+  result,
+  totalLabelVotes,
+  isLoadingPlayerLabels,
+  isSavingPlayerLabel,
+  onVotePlayerLabel,
+}: SummonerHeroProps) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<Label | null>(null);
-  const {
-    labels: playerLabels,
-    totalVotes,
-    error,
-    isLoading,
-    isSaving,
-    fetchPlayerLabels,
-    votePlayerLabel,
-  } = usePlayerLabels();
   const previewLabels = playerLabels.slice(0, 3);
   const voteCountByLabelID = useMemo(
     () => new Map(playerLabels.map((label) => [label.id, label.voteCount])),
     [playerLabels],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetchPlayerLabels(result.puuid, controller.signal);
-
-    return () => {
-      controller.abort();
-    };
-  }, [fetchPlayerLabels, result.puuid]);
-
   function labelPercentage(voteCount: number) {
-    if (totalVotes === 0) {
+    if (totalLabelVotes === 0) {
       return 0;
     }
-    return Math.round((voteCount / totalVotes) * 100);
+    return Math.round((voteCount / totalLabelVotes) * 100);
   }
 
   async function handleSaveLabel() {
-    if (!selectedLabel || isSaving) {
+    if (!selectedLabel || isSavingPlayerLabel) {
       return;
     }
 
-    const response = await votePlayerLabel(result.puuid, selectedLabel.id);
-    if (!response) {
+    const saved = await onVotePlayerLabel(selectedLabel);
+    if (!saved) {
       return;
     }
 
@@ -109,8 +106,8 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                 {result.gameName}#{result.tagLine}
               </h1>
               <p className="text-sm text-slate-400">{result.region}</p>
-              {!isComposerOpen && error ? (
-                <p className="text-sm text-red-300">{error}</p>
+              {!isComposerOpen && labelError ? (
+                <p className="text-sm text-red-300">{labelError}</p>
               ) : null}
             </div>
           </div>
@@ -140,7 +137,7 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
           <div className="fade-up-soft border-t border-cyan-300/15 pt-6">
             <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.07] p-5">
               <div className="flex flex-wrap gap-3">
-                {labels.map((label) => {
+                {availableLabels.map((label) => {
                   const isSelected = selectedLabel?.id === label.id;
                   const voteCount = voteCountByLabelID.get(label.id) ?? 0;
 
@@ -166,7 +163,7 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                 })}
               </div>
 
-              {isLoading ? (
+              {isLoadingPlayerLabels ? (
                 <p className="mt-4 text-sm text-slate-300">ラベル集計を読み込んでいます。</p>
               ) : null}
 
@@ -179,14 +176,14 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                   <button
                     type="button"
                     onClick={handleSaveLabel}
-                    disabled={isSaving}
+                    disabled={isSavingPlayerLabel}
                     className="rounded-lg border border-cyan-300/30 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/18 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSaving ? "保存中" : "保存"}
+                    {isSavingPlayerLabel ? "保存中" : "保存"}
                   </button>
                 </div>
               ) : null}
-              {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+              {labelError ? <p className="mt-4 text-sm text-red-300">{labelError}</p> : null}
             </div>
           </div>
         ) : (

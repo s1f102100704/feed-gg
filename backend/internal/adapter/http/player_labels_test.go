@@ -48,7 +48,7 @@ func TestPlayerLabelsHandler_List(t *testing.T) {
 			TotalVotes: 2,
 		},
 	}
-	handler := NewPlayerLabelsHandler(fake, "test-salt", false)
+	handler := NewPlayerLabelsHandler(fake, NewPlayerLabelVoterKeyGenerator("test-salt"), false)
 	router := chi.NewRouter()
 	router.Get("/api/players/{puuid}/labels", handler.List)
 	req := httptest.NewRequest(http.MethodGet, "/api/players/test-puuid/labels", nil)
@@ -80,7 +80,7 @@ func TestPlayerLabelsHandler_Vote(t *testing.T) {
 			TotalVotes:    2,
 		},
 	}
-	handler := NewPlayerLabelsHandler(fake, "test-salt", false)
+	handler := NewPlayerLabelsHandler(fake, NewPlayerLabelVoterKeyGenerator("test-salt"), false)
 	router := chi.NewRouter()
 	router.Post("/api/players/{puuid}/labels", handler.Vote)
 	req := httptest.NewRequest(
@@ -105,6 +105,37 @@ func TestPlayerLabelsHandler_Vote(t *testing.T) {
 	}
 }
 
+func TestPlayerLabelsHandler_VoteUsesNormalizedPuuidForVoteKey(t *testing.T) {
+	t.Parallel()
+
+	newRequest := func(path string) *http.Request {
+		req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"labelId":1}`))
+		req.RemoteAddr = "203.0.113.10:12345"
+		req.Header.Set("User-Agent", "test-agent")
+		return req
+	}
+
+	firstUsecase := &fakePlayerLabelsUsecase{statusCode: http.StatusOK, voteResult: &usecase.PlayerLabelVoteResult{}}
+	secondUsecase := &fakePlayerLabelsUsecase{statusCode: http.StatusOK, voteResult: &usecase.PlayerLabelVoteResult{}}
+	firstHandler := NewPlayerLabelsHandler(firstUsecase, NewPlayerLabelVoterKeyGenerator("test-salt"), false)
+	secondHandler := NewPlayerLabelsHandler(secondUsecase, NewPlayerLabelVoterKeyGenerator("test-salt"), false)
+
+	router := chi.NewRouter()
+	router.Post("/api/players/{puuid}/labels", firstHandler.Vote)
+	router.ServeHTTP(httptest.NewRecorder(), newRequest("/api/players/%20test-puuid%20/labels"))
+
+	router = chi.NewRouter()
+	router.Post("/api/players/{puuid}/labels", secondHandler.Vote)
+	router.ServeHTTP(httptest.NewRecorder(), newRequest("/api/players/test-puuid/labels"))
+
+	if firstUsecase.lastVoteInput.PUUID != "test-puuid" {
+		t.Fatalf("first PUUID = %q, want normalized puuid", firstUsecase.lastVoteInput.PUUID)
+	}
+	if firstUsecase.lastVoteInput.VoterKey != secondUsecase.lastVoteInput.VoterKey {
+		t.Fatal("voter keys differ for equivalent normalized PUUIDs")
+	}
+}
+
 func TestPlayerLabelsHandler_VoteReturnsUsecaseError(t *testing.T) {
 	t.Parallel()
 
@@ -112,7 +143,7 @@ func TestPlayerLabelsHandler_VoteReturnsUsecaseError(t *testing.T) {
 		statusCode: http.StatusBadRequest,
 		err:        errors.New("invalid"),
 	}
-	handler := NewPlayerLabelsHandler(fake, "test-salt", false)
+	handler := NewPlayerLabelsHandler(fake, NewPlayerLabelVoterKeyGenerator("test-salt"), false)
 	req := httptest.NewRequest(http.MethodPost, "/api/players/test-puuid/labels", strings.NewReader(`{"labelId":0}`))
 	rec := httptest.NewRecorder()
 
@@ -157,8 +188,10 @@ func TestPlayerLabelVoterKeyIsScopedByPlayer(t *testing.T) {
 	req.RemoteAddr = "203.0.113.10:12345"
 	req.Header.Set("User-Agent", "test-agent")
 
-	first := playerLabelVoterKey(req, "first-puuid", "test-salt", false)
-	second := playerLabelVoterKey(req, "second-puuid", "test-salt", false)
+	generator := NewPlayerLabelVoterKeyGenerator("test-salt")
+	identity := newClientIdentity(req, false)
+	first := generator.Generate("first-puuid", identity)
+	second := generator.Generate("second-puuid", identity)
 	if first == second {
 		t.Fatal("voter keys match across players, want player-scoped keys")
 	}

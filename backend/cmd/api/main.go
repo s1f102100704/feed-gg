@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	httpadapter "feed-gg/backend/internal/adapter/http"
@@ -48,7 +49,7 @@ func main() {
 
 	queries := dbgen.New(sqlDB)
 	labelsCache := cacheinfra.NewLabelsCache()
-	labelsRepository := labelsinfra.NewRepository(queries)
+	labelsRepository := labelsinfra.NewRepository(sqlDB, queries)
 	labelsUsecase := usecase.NewLabels(labelsCache, labelsRepository)
 	labelsHandler := httpadapter.NewLabelsHandler(labelsUsecase)
 	playerLabelsUsecase := usecase.NewPlayerLabels(labelsRepository)
@@ -56,10 +57,14 @@ func main() {
 	if playerLabelVoterKeySalt == "" {
 		log.Fatal("PLAYER_LABEL_VOTER_KEY_SALT is not set")
 	}
+	trustProxyHeaders, err := trustProxyHeadersFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
 	playerLabelsHandler := httpadapter.NewPlayerLabelsHandler(
 		playerLabelsUsecase,
-		playerLabelVoterKeySalt,
-		os.Getenv("TRUST_PROXY_HEADERS") == "true",
+		httpadapter.NewPlayerLabelVoterKeyGenerator(playerLabelVoterKeySalt),
+		trustProxyHeaders,
 	)
 	playerSearchCache := cacheinfra.NewPlayerSearchCache()
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
@@ -130,4 +135,18 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func trustProxyHeadersFromEnv() (bool, error) {
+	value := os.Getenv("TRUST_PROXY_HEADERS")
+	if value == "" {
+		return false, nil
+	}
+
+	trustProxyHeaders, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, err
+	}
+
+	return trustProxyHeaders, nil
 }

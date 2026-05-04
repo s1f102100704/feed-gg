@@ -11,6 +11,7 @@ import { SearchLoadingState } from "@/components/search/search-loading-state";
 import { SummonerHero } from "@/components/search/summoner-hero";
 import { SummonerContentLayout } from "@/components/summoner/summoner-content-layout";
 import { useLabels } from "@/hooks/use-labels";
+import { usePlayerLabels } from "@/hooks/use-player-labels";
 import { usePlayerSearch } from "@/hooks/use-player-search";
 import { DEFAULT_REGION, Region } from "@/lib/regions";
 import { buildSummonerPath } from "@/lib/player-search-path";
@@ -34,7 +35,20 @@ export function SummonerScreen({
   const [region, setRegion] = useState<Region>(resolvedRegion ?? DEFAULT_REGION);
   const [riotId, setRiotId] = useState(initialRiotId);
   const { result, error, isLoading, searchPlayer, clearResult } = usePlayerSearch();
-  const { labels, fetchLabels } = useLabels();
+  const { labels, error: labelsError, isLoading: isLabelsLoading, fetchLabels } = useLabels();
+  const {
+    labels: playerLabels,
+    labelsPUUID,
+    totalVotes: totalLabelVotes,
+    error: playerLabelsError,
+    isLoading: isPlayerLabelsLoading,
+    isSaving: isPlayerLabelSaving,
+    fetchPlayerLabels,
+    votePlayerLabel,
+  } = usePlayerLabels();
+  const resultPUUID = result?.puuid;
+  const scopedPlayerLabels = labelsPUUID === resultPUUID ? playerLabels : [];
+  const scopedTotalLabelVotes = labelsPUUID === resultPUUID ? totalLabelVotes : 0;
   const availableRegions = initialRegions.length > 0 ? initialRegions : [region];
   const selectedRegion = availableRegions.includes(region) ? region : availableRegions[0];
 
@@ -56,6 +70,19 @@ export function SummonerScreen({
     resolvedRegion,
     searchPlayer,
   ]);
+
+  useEffect(() => {
+    if (!resultPUUID) {
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetchPlayerLabels(resultPUUID, controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [fetchPlayerLabels, resultPUUID]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,7 +120,20 @@ export function SummonerScreen({
 
         {result ? (
           <div className="space-y-6">
-            <SummonerHero key={result.puuid} result={result} labels={labels} />
+            <SummonerHero
+              key={result.puuid}
+              availableLabels={labels}
+              labelError={playerLabelsError || labelsError}
+              playerLabels={scopedPlayerLabels}
+              result={result}
+              totalLabelVotes={scopedTotalLabelVotes}
+              isLoadingPlayerLabels={isPlayerLabelsLoading || isLabelsLoading}
+              isSavingPlayerLabel={isPlayerLabelSaving}
+              onVotePlayerLabel={async (label) => {
+                const response = await votePlayerLabel(result.puuid, label.id);
+                return response !== null;
+              }}
+            />
             <SummonerContentLayout
               left={<RankPanel result={result} />}
               right={<MatchHistoryPanel result={result} />}

@@ -1,18 +1,22 @@
 import { useCallback, useState } from "react";
 
-import { API_BASE_URL } from "@/lib/player-search-api";
 import {
-  ApiError,
-  PlayerLabelsResponse,
-  PlayerLabelVoteResponse,
-} from "@/types/player-search";
+  fetchPlayerLabels as fetchPlayerLabelsAPI,
+  votePlayerLabel as votePlayerLabelAPI,
+} from "@/lib/player-labels-api";
+import { PlayerLabelsResponse } from "@/types/player-labels";
+
+type PlayerLabelsState = PlayerLabelsResponse & {
+  puuid: string;
+};
 
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
 export function usePlayerLabels() {
-  const [labels, setLabels] = useState<PlayerLabelsResponse>({
+  const [labels, setLabels] = useState<PlayerLabelsState>({
+    puuid: "",
     labels: [],
     totalVotes: 0,
   });
@@ -23,28 +27,24 @@ export function usePlayerLabels() {
   const fetchPlayerLabels = useCallback(async (puuid: string, signal?: AbortSignal) => {
     setIsLoading(true);
     setError("");
+    setLabels({ puuid, labels: [], totalVotes: 0 });
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/players/${encodeURIComponent(puuid)}/labels`,
-        { signal },
-      );
-      const payload = (await response.json()) as PlayerLabelsResponse | ApiError;
+      const payload = await fetchPlayerLabelsAPI(puuid, signal);
 
       if (signal?.aborted) {
         return null;
       }
 
-      if (!response.ok) {
-        const nextError =
-          "error" in payload ? payload.error : "プレイヤーのラベル取得に失敗しました。";
-        setLabels({ labels: [], totalVotes: 0 });
-        setError(nextError);
+      if ("error" in payload) {
+        setLabels({ puuid, labels: [], totalVotes: 0 });
+        setError(payload.error);
         return null;
       }
 
       const nextLabels = payload as PlayerLabelsResponse;
       setLabels({
+        puuid,
         labels: nextLabels.labels ?? [],
         totalVotes: nextLabels.totalVotes ?? 0,
       });
@@ -54,7 +54,7 @@ export function usePlayerLabels() {
         return null;
       }
 
-      setLabels({ labels: [], totalVotes: 0 });
+      setLabels({ puuid, labels: [], totalVotes: 0 });
       setError("プレイヤーのラベル取得に失敗しました。");
       return null;
     } finally {
@@ -69,29 +69,19 @@ export function usePlayerLabels() {
     setError("");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/players/${encodeURIComponent(puuid)}/labels`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ labelId }),
-        },
-      );
-      const payload = (await response.json()) as PlayerLabelVoteResponse | ApiError;
+      const payload = await votePlayerLabelAPI(puuid, labelId);
 
-      if (!response.ok) {
-        setError("error" in payload ? payload.error : "ラベルの保存に失敗しました。");
+      if ("error" in payload) {
+        setError(payload.error);
         return null;
       }
 
-      const nextLabels = payload as PlayerLabelVoteResponse;
       setLabels({
-        labels: nextLabels.labels ?? [],
-        totalVotes: nextLabels.totalVotes ?? 0,
+        puuid,
+        labels: payload.labels ?? [],
+        totalVotes: payload.totalVotes ?? 0,
       });
-      return nextLabels;
+      return payload;
     } catch {
       setError("ラベルの保存に失敗しました。");
       return null;
@@ -102,6 +92,7 @@ export function usePlayerLabels() {
 
   return {
     labels: labels.labels,
+    labelsPUUID: labels.puuid,
     totalVotes: labels.totalVotes,
     error,
     isLoading,
