@@ -51,6 +51,16 @@ func main() {
 	labelsRepository := labelsinfra.NewRepository(queries)
 	labelsUsecase := usecase.NewLabels(labelsCache, labelsRepository)
 	labelsHandler := httpadapter.NewLabelsHandler(labelsUsecase)
+	playerLabelsUsecase := usecase.NewPlayerLabels(labelsRepository)
+	playerLabelVoterKeySalt := os.Getenv("PLAYER_LABEL_VOTER_KEY_SALT")
+	if playerLabelVoterKeySalt == "" {
+		log.Fatal("PLAYER_LABEL_VOTER_KEY_SALT is not set")
+	}
+	playerLabelsHandler := httpadapter.NewPlayerLabelsHandler(
+		playerLabelsUsecase,
+		playerLabelVoterKeySalt,
+		os.Getenv("TRUST_PROXY_HEADERS") == "true",
+	)
 	playerSearchCache := cacheinfra.NewPlayerSearchCache()
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {
@@ -87,6 +97,9 @@ func main() {
 
 	r.Get("/api/players/{region}/{gameName}/{tagLine}", playerSearchHandler.Search)
 	r.Options("/api/players/{region}/{gameName}/{tagLine}", playerSearchHandler.Search)
+	r.Get("/api/players/{puuid}/labels", playerLabelsHandler.List)
+	r.Post("/api/players/{puuid}/labels", playerLabelsHandler.Vote)
+	r.Options("/api/players/{puuid}/labels", playerLabelsHandler.List)
 	r.Get("/api/labels", labelsHandler.List)
 	r.Options("/api/labels", labelsHandler.List)
 	r.Get("/api/regions", regionsHandler.List)
@@ -107,7 +120,7 @@ func main() {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 		if r.Method == http.MethodOptions {

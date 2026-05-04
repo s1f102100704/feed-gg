@@ -93,7 +93,7 @@ export function SummonerScreen({
 
         {result ? (
           <div className="space-y-6">
-            <SummonerHero result={result} labels={labels} />
+            <SummonerHero key={result.puuid} result={result} labels={labels} />
             <SummonerContentLayout
               left={<RankPanel result={result} />}
               right={<MatchHistoryPanel result={result} />}

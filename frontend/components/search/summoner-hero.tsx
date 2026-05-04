@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { usePlayerLabels } from "@/hooks/use-player-labels";
 import { Label, SearchResult } from "@/types/player-search";
 
 type SummonerHeroProps = {
@@ -13,7 +14,49 @@ type SummonerHeroProps = {
 export function SummonerHero({ result, labels }: SummonerHeroProps) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<Label | null>(null);
-  const previewLabels = labels.slice(0, 3);
+  const {
+    labels: playerLabels,
+    totalVotes,
+    error,
+    isLoading,
+    isSaving,
+    fetchPlayerLabels,
+    votePlayerLabel,
+  } = usePlayerLabels();
+  const previewLabels = playerLabels.slice(0, 3);
+  const voteCountByLabelID = useMemo(
+    () => new Map(playerLabels.map((label) => [label.id, label.voteCount])),
+    [playerLabels],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchPlayerLabels(result.puuid, controller.signal);
+
+    return () => {
+      controller.abort();
+    };
+  }, [fetchPlayerLabels, result.puuid]);
+
+  function labelPercentage(voteCount: number) {
+    if (totalVotes === 0) {
+      return 0;
+    }
+    return Math.round((voteCount / totalVotes) * 100);
+  }
+
+  async function handleSaveLabel() {
+    if (!selectedLabel || isSaving) {
+      return;
+    }
+
+    const response = await votePlayerLabel(result.puuid, selectedLabel.id);
+    if (!response) {
+      return;
+    }
+
+    setIsComposerOpen(false);
+  }
 
   return (
     <section
@@ -56,6 +99,9 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                     className="inline-flex items-center gap-2 rounded-full border border-[#5b3236] bg-[#201317] px-3 py-1.5 text-xs text-[#f5e8de] transition hover:border-[#7b474c] hover:bg-[#2a171c]"
                   >
                     <span>{label.name}</span>
+                    <span className="text-[#f0b26f]">
+                      {labelPercentage(label.voteCount)}%
+                    </span>
                   </button>
                 ))}
               </div>
@@ -63,6 +109,9 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                 {result.gameName}#{result.tagLine}
               </h1>
               <p className="text-sm text-slate-400">{result.region}</p>
+              {!isComposerOpen && error ? (
+                <p className="text-sm text-red-300">{error}</p>
+              ) : null}
             </div>
           </div>
 
@@ -93,6 +142,7 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
               <div className="flex flex-wrap gap-3">
                 {labels.map((label) => {
                   const isSelected = selectedLabel?.id === label.id;
+                  const voteCount = voteCountByLabelID.get(label.id) ?? 0;
 
                   return (
                     <button
@@ -106,10 +156,19 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                       }`}
                     >
                       {label.name}
+                      {voteCount > 0 ? (
+                        <span className="ml-2 text-xs opacity-70">
+                          {labelPercentage(voteCount)}%
+                        </span>
+                      ) : null}
                     </button>
                   );
                 })}
               </div>
+
+              {isLoading ? (
+                <p className="mt-4 text-sm text-slate-300">ラベル集計を読み込んでいます。</p>
+              ) : null}
 
               {selectedLabel ? (
                 <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-cyan-300/15 pt-4">
@@ -117,8 +176,17 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                   <span className="rounded-full bg-[#f0b26f] px-3 py-1 text-sm font-semibold text-[#24150d]">
                     {selectedLabel.name}
                   </span>
+                  <button
+                    type="button"
+                    onClick={handleSaveLabel}
+                    disabled={isSaving}
+                    className="rounded-lg border border-cyan-300/30 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/18 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSaving ? "保存中" : "保存"}
+                  </button>
                 </div>
               ) : null}
+              {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
             </div>
           </div>
         ) : (
