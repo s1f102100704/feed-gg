@@ -7,6 +7,10 @@ import {
   PlayerLabelVoteResponse,
 } from "@/types/player-search";
 
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
 export function usePlayerLabels() {
   const [labels, setLabels] = useState<PlayerLabelsResponse>({
     labels: [],
@@ -16,15 +20,20 @@ export function usePlayerLabels() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const fetchPlayerLabels = useCallback(async (puuid: string) => {
+  const fetchPlayerLabels = useCallback(async (puuid: string, signal?: AbortSignal) => {
     setIsLoading(true);
     setError("");
 
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/players/${encodeURIComponent(puuid)}/labels`,
+        { signal },
       );
       const payload = (await response.json()) as PlayerLabelsResponse | ApiError;
+
+      if (signal?.aborted) {
+        return null;
+      }
 
       if (!response.ok) {
         const nextError =
@@ -40,12 +49,18 @@ export function usePlayerLabels() {
         totalVotes: nextLabels.totalVotes ?? 0,
       });
       return nextLabels;
-    } catch {
+    } catch (error) {
+      if (isAbortError(error) || signal?.aborted) {
+        return null;
+      }
+
       setLabels({ labels: [], totalVotes: 0 });
       setError("プレイヤーのラベル取得に失敗しました。");
       return null;
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   }, []);
 

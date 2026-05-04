@@ -2,12 +2,12 @@ package httpadapter
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 
 	"feed-gg/backend/internal/usecase"
@@ -21,15 +21,25 @@ type PlayerLabelsUsecase interface {
 }
 
 type PlayerLabelsHandler struct {
-	usecase PlayerLabelsUsecase
+	usecase           PlayerLabelsUsecase
+	voterKeySalt      string
+	trustProxyHeaders bool
 }
 
 type playerLabelVoteRequest struct {
 	LabelID int16 `json:"labelId"`
 }
 
-func NewPlayerLabelsHandler(usecase PlayerLabelsUsecase) *PlayerLabelsHandler {
-	return &PlayerLabelsHandler{usecase: usecase}
+func NewPlayerLabelsHandler(
+	usecase PlayerLabelsUsecase,
+	voterKeySalt string,
+	trustProxyHeaders bool,
+) *PlayerLabelsHandler {
+	return &PlayerLabelsHandler{
+		usecase:           usecase,
+		voterKeySalt:      voterKeySalt,
+		trustProxyHeaders: trustProxyHeaders,
+	}
 }
 
 func (h *PlayerLabelsHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -61,10 +71,11 @@ func (h *PlayerLabelsHandler) Vote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	puuid := chi.URLParam(r, "puuid")
 	result, statusCode, err := h.usecase.Vote(r.Context(), usecase.PlayerLabelVoteInput{
-		PUUID:    chi.URLParam(r, "puuid"),
+		PUUID:    puuid,
 		LabelID:  request.LabelID,
-		VoterKey: playerLabelVoterKey(r),
+		VoterKey: playerLabelVoterKey(r, puuid, h.voterKeySalt, h.trustProxyHeaders),
 	})
 	if err != nil {
 		writeJSON(w, statusCode, errorResponse{Error: err.Error()})
@@ -74,23 +85,29 @@ func (h *PlayerLabelsHandler) Vote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
-func playerLabelVoterKey(r *http.Request) string {
-	source := clientIP(r) + "|" + r.UserAgent()
-	salt := os.Getenv("PLAYER_LABEL_VOTER_KEY_SALT")
-	hash := sha256.Sum256([]byte(salt + "|" + source))
-	return hex.EncodeToString(hash[:])
+func playerLabelVoterKey(
+	r *http.Request,
+	puuid string,
+	salt string,
+	trustProxyHeaders bool,
+) string {
+	source := puuid + "|" + clientIP(r, trustProxyHeaders) + "|" + r.UserAgent()
+	mac := hmac.New(sha256.New, []byte(salt))
+	_, _ = mac.Write([]byte(source))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
-func clientIP(r *http.Request) string {
-	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		parts := strings.Split(forwardedFor, ",")
-		if ip := strings.TrimSpace(parts[0]); ip != "" {
-			return ip
+func clientIP(r *http.Request, trustProxyHeaders bool) string {
+	if trustProxyHeaders {
+		if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+			if ip := firstValidForwardedIP(forwardedFor); ip != "" {
+				return ip
+			}
 		}
-	}
 
-	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
-		return realIP
+		if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); net.ParseIP(realIP) != nil {
+			return realIP
+		}
 	}
 
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -99,4 +116,16 @@ func clientIP(r *http.Request) string {
 	}
 
 	return strings.TrimSpace(r.RemoteAddr)
+}
+
+func firstValidForwardedIP(forwardedFor string) string {
+	parts := strings.Split(forwardedFor, ",")
+	for _, part := range parts {
+		ip := strings.TrimSpace(part)
+		if net.ParseIP(ip) != nil {
+			return ip
+		}
+	}
+
+	return ""
 }

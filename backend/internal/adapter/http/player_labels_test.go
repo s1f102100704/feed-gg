@@ -48,7 +48,7 @@ func TestPlayerLabelsHandler_List(t *testing.T) {
 			TotalVotes: 2,
 		},
 	}
-	handler := NewPlayerLabelsHandler(fake)
+	handler := NewPlayerLabelsHandler(fake, "test-salt", false)
 	router := chi.NewRouter()
 	router.Get("/api/players/{puuid}/labels", handler.List)
 	req := httptest.NewRequest(http.MethodGet, "/api/players/test-puuid/labels", nil)
@@ -80,7 +80,7 @@ func TestPlayerLabelsHandler_Vote(t *testing.T) {
 			TotalVotes:    2,
 		},
 	}
-	handler := NewPlayerLabelsHandler(fake)
+	handler := NewPlayerLabelsHandler(fake, "test-salt", false)
 	router := chi.NewRouter()
 	router.Post("/api/players/{puuid}/labels", handler.Vote)
 	req := httptest.NewRequest(
@@ -112,7 +112,7 @@ func TestPlayerLabelsHandler_VoteReturnsUsecaseError(t *testing.T) {
 		statusCode: http.StatusBadRequest,
 		err:        errors.New("invalid"),
 	}
-	handler := NewPlayerLabelsHandler(fake)
+	handler := NewPlayerLabelsHandler(fake, "test-salt", false)
 	req := httptest.NewRequest(http.MethodPost, "/api/players/test-puuid/labels", strings.NewReader(`{"labelId":0}`))
 	rec := httptest.NewRecorder()
 
@@ -123,5 +123,43 @@ func TestPlayerLabelsHandler_VoteReturnsUsecaseError(t *testing.T) {
 	}
 	if rec.Body.String() != "{\"error\":\"invalid\"}\n" {
 		t.Fatalf("body = %q, want error response", rec.Body.String())
+	}
+}
+
+func TestClientIPIgnoresForwardedHeadersByDefault(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/players/test-puuid/labels", nil)
+	req.RemoteAddr = "203.0.113.10:12345"
+	req.Header.Set("X-Forwarded-For", "198.51.100.1")
+
+	if got := clientIP(req, false); got != "203.0.113.10" {
+		t.Fatalf("clientIP = %q, want RemoteAddr host", got)
+	}
+}
+
+func TestClientIPUsesValidForwardedHeaderWhenTrusted(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/players/test-puuid/labels", nil)
+	req.RemoteAddr = "203.0.113.10:12345"
+	req.Header.Set("X-Forwarded-For", "not-an-ip, 198.51.100.1")
+
+	if got := clientIP(req, true); got != "198.51.100.1" {
+		t.Fatalf("clientIP = %q, want first valid forwarded IP", got)
+	}
+}
+
+func TestPlayerLabelVoterKeyIsScopedByPlayer(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/players/test-puuid/labels", nil)
+	req.RemoteAddr = "203.0.113.10:12345"
+	req.Header.Set("User-Agent", "test-agent")
+
+	first := playerLabelVoterKey(req, "first-puuid", "test-salt", false)
+	second := playerLabelVoterKey(req, "second-puuid", "test-salt", false)
+	if first == second {
+		t.Fatal("voter keys match across players, want player-scoped keys")
 	}
 }

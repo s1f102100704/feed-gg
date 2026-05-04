@@ -52,7 +52,15 @@ func main() {
 	labelsUsecase := usecase.NewLabels(labelsCache, labelsRepository)
 	labelsHandler := httpadapter.NewLabelsHandler(labelsUsecase)
 	playerLabelsUsecase := usecase.NewPlayerLabels(labelsRepository)
-	playerLabelsHandler := httpadapter.NewPlayerLabelsHandler(playerLabelsUsecase)
+	playerLabelVoterKeySalt := os.Getenv("PLAYER_LABEL_VOTER_KEY_SALT")
+	if playerLabelVoterKeySalt == "" {
+		log.Fatal("PLAYER_LABEL_VOTER_KEY_SALT is not set")
+	}
+	playerLabelsHandler := httpadapter.NewPlayerLabelsHandler(
+		playerLabelsUsecase,
+		playerLabelVoterKeySalt,
+		os.Getenv("TRUST_PROXY_HEADERS") == "true",
+	)
 	playerSearchCache := cacheinfra.NewPlayerSearchCache()
 	riotAPIKey := os.Getenv("RIOT_API_KEY")
 	if riotAPIKey == "" {

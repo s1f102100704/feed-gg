@@ -30,7 +30,12 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
   );
 
   useEffect(() => {
-    void fetchPlayerLabels(result.puuid);
+    const controller = new AbortController();
+    void fetchPlayerLabels(result.puuid, controller.signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [fetchPlayerLabels, result.puuid]);
 
   function labelPercentage(voteCount: number) {
@@ -41,7 +46,7 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
   }
 
   async function handleSaveLabel() {
-    if (!selectedLabel) {
+    if (!selectedLabel || isSaving) {
       return;
     }
 
@@ -104,6 +109,9 @@ export function SummonerHero({ result, labels }: SummonerHeroProps) {
                 {result.gameName}#{result.tagLine}
               </h1>
               <p className="text-sm text-slate-400">{result.region}</p>
+              {!isComposerOpen && error ? (
+                <p className="text-sm text-red-300">{error}</p>
+              ) : null}
             </div>
           </div>
 
